@@ -7,7 +7,7 @@
 [![Join the chat at https://gitter.im/eneim/Toro](https://badges.gitter.im/eneim/Toro.svg)](https://gitter.im/eneim/Toro?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) <a href="http://www.methodscount.com/?lib=im.ene.toro2%3Atoro%3A%2B"><img src="https://img.shields.io/badge/Methods and size-core: 326 | deps: 10993 | 32 KB-e91e63.svg"/></a>
 
 
-<a href="https://www.iconfinder.com/icons/1105270/brand_connect_shape_square_icon#size=512""><img src="/art/web_hi_res_512.png" width="256"></a>
+<a href="https://www.iconfinder.com/icons/1105270/brand_connect_shape_square_icon#size=512"><img src="/art/web_hi_res_512.png" width="256"></a>
 
 
 
@@ -67,7 +67,7 @@ allprojects {
 
 ```groovy
 ext {
-	toroVersion = '2.2.0'
+	toroVersion = '2.3.0'
 }
 
 dependencies {
@@ -112,7 +112,7 @@ Latest version is always visible here: [![Download](https://api.bintray.com/pack
 
 <a href='https://ko-fi.com/A342OWW' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://az743702.vo.msecnd.net/cdn/kofi2.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
 
-### Hall of Fames
+### Hall of Fame
 
 *Use Toro in your App? <a href="mailto:nam@ene.im?subject=Hi Nam">Email me</a> to get promoted here.*
 
