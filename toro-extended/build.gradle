@@ -20,7 +20,7 @@ ext {
   bintrayRepo = 'Toro'
   bintrayName = 'toro-extended'
 
-  publishedGroupId = 'im.ene.toro2'
+  publishedGroupId = 'im.ene.toro3'
   artifact = 'toro-extended'
   libraryName = 'toro-extended'
 

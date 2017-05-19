@@ -20,7 +20,7 @@ ext {
   bintrayRepo = 'Toro'
   bintrayName = 'toro-ext-mediaplayer'
 
-  publishedGroupId = 'im.ene.toro2'
+  publishedGroupId = 'im.ene.toro3'
   artifact = 'toro-ext-mediaplayer'
   libraryName = 'toro-ext-mediaplayer'
 
