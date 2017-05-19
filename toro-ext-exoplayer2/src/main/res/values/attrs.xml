@@ -16,19 +16,6 @@
 
 <resources>
 
-  <declare-styleable name="ExoVideoView">
-    <attr format="enum" name="tx2_surfaceType">
-      <enum name="Default" value="0"/>
-      <enum name="SurfaceView" value="1"/>
-      <enum name="TextureView" value="2"/>
-    </attr>
-    <attr format="enum" name="tx2_resizeMode">
-      <enum name="auto" value="0"/>
-      <enum name="fixedWidth" value="1"/>
-      <enum name="fixedHeight" value="2"/>
-    </attr>
-  </declare-styleable>
-
   <declare-styleable name="ExoPlayerView">
     <attr name="use_artwork"/>
     <attr name="default_artwork"/>
