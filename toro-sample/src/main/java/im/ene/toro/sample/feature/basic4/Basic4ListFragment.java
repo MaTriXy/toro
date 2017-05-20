@@ -22,11 +22,11 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import im.ene.toro.Toro;
+import im.ene.toro.PlayerListView;
+import im.ene.toro.PlaylistHelper;
 import im.ene.toro.sample.BaseToroFragment;
 import im.ene.toro.sample.R;
 
@@ -35,8 +35,9 @@ import im.ene.toro.sample.R;
  */
 public class Basic4ListFragment extends BaseToroFragment {
 
-  protected RecyclerView recyclerView;
-  protected RecyclerView.Adapter adapter;
+  protected PlayerListView recyclerView;
+  protected Basic4Adapter adapter;
+  private PlaylistHelper playlistHelper;
 
   public static Basic4ListFragment newInstance() {
     return new Basic4ListFragment();
@@ -50,39 +51,28 @@ public class Basic4ListFragment extends BaseToroFragment {
   @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2) @Override
   public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
-    recyclerView = (RecyclerView) view.findViewById(R.id.recycler_view);
-    RecyclerView.LayoutManager layoutManager = getLayoutManager();
+    recyclerView = (PlayerListView) view.findViewById(R.id.recycler_view);
+    LinearLayoutManager layoutManager = new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
     recyclerView.setLayoutManager(layoutManager);
-    if (layoutManager instanceof LinearLayoutManager) {
-      recyclerView.addItemDecoration(new DividerItemDecoration(getContext(),
-          ((LinearLayoutManager) layoutManager).getOrientation()));
-    }
+    recyclerView.addItemDecoration(new DividerItemDecoration(getContext(),
+        layoutManager.getOrientation()));
 
-    adapter = getAdapter();
-    recyclerView.setHasFixedSize(false);
+    adapter = new Basic4Adapter();
     recyclerView.setAdapter(adapter);
 
-    Toro.register(recyclerView);
+    playlistHelper = new PlaylistHelper(adapter);
+  }
+
+  @Override protected void dispatchFragmentActive() {
+    playlistHelper.registerPlayerListView(recyclerView);
+  }
+
+  @Override protected void dispatchFragmentInactive() {
+    playlistHelper.registerPlayerListView(null);
   }
 
   @Override public void onDestroyView() {
     super.onDestroyView();
-    Toro.unregister(recyclerView);
-  }
-
-  @Override protected void dispatchFragmentActive() {
-    // Do nothing
-  }
-
-  @Override protected void dispatchFragmentInactive() {
-    // Do nothing
-  }
-
-  RecyclerView.LayoutManager getLayoutManager() {
-    return new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
-  }
-
-  RecyclerView.Adapter getAdapter() {
-    return new Basic4Adapter();
+    playlistHelper = null;
   }
 }

@@ -22,11 +22,13 @@ android:descendantFocusability="blocksDescendants" is added to pass click event 
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/video"
     android:layout_width="match_parent"
-    android:layout_height="192dp"
+    android:layout_height="wrap_content"
     android:layout_margin="4dp"
     android:descendantFocusability="blocksDescendants"
+    android:minHeight="192dp"
     android:orientation="vertical"
     android:padding="4dp"
+    app:resize_mode="fixed_width"
     app:use_controller="false"
     >
   <!--

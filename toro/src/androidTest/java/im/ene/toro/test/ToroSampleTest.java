@@ -19,7 +19,7 @@ package im.ene.toro.test;
 import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
 import android.support.v7.widget.RecyclerView;
-import im.ene.toro.Toro;
+import im.ene.toro.PlaylistHelper;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -45,8 +45,8 @@ import org.junit.runner.RunWith;
         TestAdapter adapter = new TestAdapter();
         recyclerView.setAdapter(adapter);
 
-        Toro.register(recyclerView);
-        Assert.assertNotNull(Toro.sInstance);
+        PlaylistHelper helper = new PlaylistHelper(adapter);
+        Assert.assertNotNull(helper.getStrategy());
       }
     });
   }

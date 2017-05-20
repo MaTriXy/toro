@@ -25,7 +25,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import im.ene.toro.BaseAdapter;
-import im.ene.toro.Toro;
+import im.ene.toro.PlayerListView;
+import im.ene.toro.PlaylistHelper;
 import im.ene.toro.ToroAdapter;
 import im.ene.toro.sample.BaseToroFragment;
 import im.ene.toro.sample.R;
@@ -58,7 +59,7 @@ public class SingleItemFragment extends BaseToroFragment {
     }
 
     @Override public int getItemCount() {
-      return 1;
+      return Integer.MAX_VALUE;
     }
   }
 
@@ -67,25 +68,35 @@ public class SingleItemFragment extends BaseToroFragment {
     return inflater.inflate(R.layout.generic_recycler_view, container, false);
   }
 
-  RecyclerView recyclerView;
+  PlayerListView recyclerView;
+  PlaylistHelper playlistHelper;
 
   public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
-    recyclerView = (RecyclerView) view.findViewById(R.id.recycler_view);
+    recyclerView = (PlayerListView) view.findViewById(R.id.recycler_view);
     RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getContext());
     recyclerView.setLayoutManager(layoutManager);
     recyclerView.addItemDecoration(new DividerItemDecoration(getContext(),
         ((LinearLayoutManager) layoutManager).getOrientation()));
 
     Adapter adapter = new Adapter();
-    recyclerView.setHasFixedSize(false);
     recyclerView.setAdapter(adapter);
 
-    Toro.register(recyclerView);
+    playlistHelper = new PlaylistHelper(adapter);
+  }
+
+  @Override protected void dispatchFragmentActive() {
+    super.dispatchFragmentActive();
+    playlistHelper.registerPlayerListView(recyclerView);
+  }
+
+  @Override protected void dispatchFragmentInactive() {
+    super.dispatchFragmentInactive();
+    playlistHelper.registerPlayerListView(null);
   }
 
   @Override public void onDestroyView() {
     super.onDestroyView();
-    Toro.unregister(recyclerView);
+    playlistHelper = null;
   }
 }

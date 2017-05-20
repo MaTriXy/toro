@@ -45,7 +45,7 @@ public class ExtPlayerViewHelper extends LongClickableViewHelper {
       final PlayerManager manager = super.getPlayerManager(itemView.getParent());
       switch (nextTarget) {
         case NEXT_PLAYER:
-          if (manager instanceof ExtToroAdapter) {
+          if (manager != null && manager instanceof ExtToroAdapter) {
             ((ExtToroAdapter) manager).scrollToNextVideoFromPosition(
                 ((RecyclerView.ViewHolder) player).getAdapterPosition());
           }

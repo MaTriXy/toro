@@ -33,7 +33,8 @@ import butterknife.ButterKnife;
 import butterknife.Unbinder;
 import com.google.android.exoplayer2.C;
 import im.ene.toro.PlaybackState;
-import im.ene.toro.Toro;
+import im.ene.toro.PlayerListView;
+import im.ene.toro.PlaylistHelper;
 import im.ene.toro.ToroPlayer;
 import im.ene.toro.sample.BaseToroFragment;
 import im.ene.toro.sample.R;
@@ -67,8 +68,10 @@ public class FacebookTimelineFragment extends BaseToroFragment
     return fragment;
   }
 
-  @BindView(R.id.recycler_view) RecyclerView mRecyclerView;
+  @BindView(R.id.recycler_view) PlayerListView recyclerView;
   TimelineAdapter adapter;
+  PlaylistHelper playlistHelper;
+
   boolean isActive = true;
   boolean playlistMode = false;
 
@@ -95,9 +98,8 @@ public class FacebookTimelineFragment extends BaseToroFragment
     adapter = new TimelineAdapter();
     LinearLayoutManager layoutManager =
         new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
-    mRecyclerView.setHasFixedSize(false);
-    mRecyclerView.setLayoutManager(layoutManager);
-    mRecyclerView.setAdapter(adapter);
+    recyclerView.setLayoutManager(layoutManager);
+    recyclerView.setAdapter(adapter);
 
     adapter.setOnItemClickListener(new TimelineAdapter.ItemClickListener() {
       @Override protected void onOgpItemClick(RecyclerView.ViewHolder viewHolder, View view,
@@ -108,7 +110,7 @@ public class FacebookTimelineFragment extends BaseToroFragment
 
       @Override protected void onPhotoClick(RecyclerView.ViewHolder viewHolder, View view,
           TimelineItem.PhotoItem item) {
-
+        // do nothing
       }
 
       @Override
@@ -136,6 +138,8 @@ public class FacebookTimelineFragment extends BaseToroFragment
             FacebookPlaylistFragment.class.getSimpleName());
       }
     });
+
+    playlistHelper = new PlaylistHelper(adapter);
   }
 
   @Override public void onSaveInstanceState(Bundle outState) {
@@ -157,6 +161,8 @@ public class FacebookTimelineFragment extends BaseToroFragment
     outState.putBoolean(ARGS_PLAYBACK_MODE, playlistMode);
   }
 
+  SavedPlayback latestState;
+
   @SuppressWarnings("Duplicates") @Override
   public void onViewStateRestored(@Nullable Bundle state) {
     super.onViewStateRestored(state);
@@ -171,39 +177,20 @@ public class FacebookTimelineFragment extends BaseToroFragment
     }
 
     this.playlistMode = state != null && state.getBoolean(ARGS_PLAYBACK_MODE);
+    // in landscape
+    this.latestState = state != null && state.containsKey(ARGS_PLAYBACK_LATEST)
+        ? (SavedPlayback) state.getParcelable(ARGS_PLAYBACK_LATEST) : null;
 
     if (bigPlayerFragment != null) {
       bigPlayerFragment.dismissAllowingStateLoss();
     }
-
-    if (this.playlistMode) {
-      // playlist is showing, just return
-      return;
-    }
-
-    if (windowManager.getDefaultDisplay().getRotation() % 180 == 0) {
-      Toro.register(mRecyclerView);
-    } else {
-      // in landscape
-      SavedPlayback latestState = state != null && state.containsKey(ARGS_PLAYBACK_LATEST)
-          ? (SavedPlayback) state.getParcelable(ARGS_PLAYBACK_LATEST) : null;
-
-      if (latestState == null) {
-        Toro.register(mRecyclerView);
-        return;
-      }
-
-      VideoItem videoItem = latestState.videoItem;
-      bigPlayerFragment =
-          BigPlayerFragment.newInstance(videoItem.getVideoUrl(), latestState.playbackState);
-      bigPlayerFragment.setTargetFragment(this, 2000);
-      bigPlayerFragment.show(getChildFragmentManager(), BigPlayerFragment.TAG);
-    }
   }
+
+
 
   @Override public void onDestroyView() {
     super.onDestroyView();
-    Toro.unregister(mRecyclerView);
+    playlistHelper = null;
     if (unbinder != null) {
       unbinder.unbind();
     }
@@ -216,9 +203,8 @@ public class FacebookTimelineFragment extends BaseToroFragment
 
   @Override public void onPlaylistAttached() {
     playlistMode = true;
-    // on orientation change, this call will happened before recyclerview is created
-    if (mRecyclerView != null) {
-      Toro.unregister(mRecyclerView);
+    if (playlistHelper != null) { // 99% it is null here ...
+      playlistHelper.registerPlayerListView(null);
     }
   }
 
@@ -229,22 +215,40 @@ public class FacebookTimelineFragment extends BaseToroFragment
         state.getPosition(), state.getDuration());
 
     if (isActive) {
-      Toro.register(mRecyclerView);
+      playlistHelper.registerPlayerListView(recyclerView);
     }
   }
 
   @Override protected void dispatchFragmentActive() {
     isActive = true;
+    if (this.playlistMode) {
+      // playlist is showing, just return
+      return;
+    }
+
+    if (windowManager.getDefaultDisplay().getRotation() % 180 == 0) {
+      playlistHelper.registerPlayerListView(recyclerView);
+    } else {
+      if (latestState == null) {
+        playlistHelper.registerPlayerListView(recyclerView);
+        return;
+      }
+
+      VideoItem videoItem = latestState.videoItem;
+      bigPlayerFragment =
+          BigPlayerFragment.newInstance(videoItem.getVideoUrl(), latestState.playbackState);
+      bigPlayerFragment.setTargetFragment(this, 2000);
+      bigPlayerFragment.show(getChildFragmentManager(), BigPlayerFragment.TAG);
+    }
   }
 
   @Override protected void dispatchFragmentInactive() {
     isActive = false;
+    playlistHelper.registerPlayerListView(null);
   }
 
   @Override public void onBigPlayerAttached() {
-    if (mRecyclerView != null) {
-      Toro.unregister(mRecyclerView);
-    }
+    playlistHelper.registerPlayerListView(null);
   }
 
   @Override public void onBigPlayerDetached(@NonNull PlaybackState state) {
@@ -252,5 +256,4 @@ public class FacebookTimelineFragment extends BaseToroFragment
       adapter.savePlaybackState(state.getMediaId(), state.getPosition(), state.getDuration());
     }
   }
-
 }

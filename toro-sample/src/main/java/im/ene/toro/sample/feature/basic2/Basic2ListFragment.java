@@ -23,12 +23,12 @@ import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
-import im.ene.toro.Toro;
+import im.ene.toro.PlayerListView;
+import im.ene.toro.PlaylistHelper;
 import im.ene.toro.ToroPlayer;
 import im.ene.toro.ToroStrategy;
 import im.ene.toro.sample.BaseToroFragment;
@@ -47,50 +47,16 @@ import java.util.List;
  */
 public class Basic2ListFragment extends BaseToroFragment {
 
-  protected RecyclerView mRecyclerView;
-  protected RecyclerView.Adapter mAdapter;
+  protected PlayerListView recyclerView;
+  protected Basic2Adapter adapter;
+  private PlaylistHelper playlistHelper;
 
   public static Basic2ListFragment newInstance() {
     return new Basic2ListFragment();
   }
 
-  // Restore in onDetach to prevent the playback strategy on other places.
-  ToroStrategy strategyToRestore;
   // To tell Toro's strategy which is the Video to play first.
   int firstVideoPosition;
-
-  @Override public void onAttach(Context context) {
-    super.onAttach(context);
-    strategyToRestore = Toro.getStrategy();
-    Toro.setStrategy(new ToroStrategy() {
-      boolean isFirstVideoObserved = false;
-
-      @Override public String getDescription() {
-        return "First video plays first";
-      }
-
-      @Override public ToroPlayer findBestPlayer(List<ToroPlayer> candidates) {
-        return strategyToRestore.findBestPlayer(candidates);
-      }
-
-      @Override public boolean allowsToPlay(ToroPlayer player, ViewParent parent) {
-        boolean allowToPlay =
-            (isFirstVideoObserved || player.getPlayOrder() == firstVideoPosition)  //
-                && strategyToRestore.allowsToPlay(player, parent);
-        // Keep track of first video on top.
-        if (player.getPlayOrder() == firstVideoPosition) {
-          isFirstVideoObserved = true;
-        }
-        return allowToPlay;
-      }
-    });
-  }
-
-  @Override public void onDetach() {
-    // Restore to old Strategy.
-    Toro.setStrategy(strategyToRestore);
-    super.onDetach();
-  }
 
   @Nullable @Override public View onCreateView(LayoutInflater inflater, ViewGroup container,
       Bundle savedInstanceState) {
@@ -100,52 +66,69 @@ public class Basic2ListFragment extends BaseToroFragment {
   @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2) @Override
   public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
-    mRecyclerView = (RecyclerView) view.findViewById(R.id.recycler_view);
-    RecyclerView.LayoutManager layoutManager = getLayoutManager();
-    mRecyclerView.setLayoutManager(layoutManager);
-    if (layoutManager instanceof LinearLayoutManager) {
-      mRecyclerView.addItemDecoration(new DividerItemDecoration(getContext(),
-          ((LinearLayoutManager) layoutManager).getOrientation()));
-    }
+    recyclerView = (PlayerListView) view.findViewById(R.id.recycler_view);
+    LinearLayoutManager layoutManager =
+        new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
+    recyclerView.setLayoutManager(layoutManager);
+    recyclerView.addItemDecoration(
+        new DividerItemDecoration(getContext(), layoutManager.getOrientation()));
 
-    mAdapter = getAdapter();
+    adapter = new Basic2Adapter();
     // Do the magic.
-    if (mAdapter instanceof OrderedVideoList) {
-      firstVideoPosition = ((OrderedVideoList) mAdapter).getFirstVideoPosition();
-    }
+    firstVideoPosition = adapter.getFirstVideoPosition();
 
-    mRecyclerView.setHasFixedSize(false);
-    mRecyclerView.setAdapter(mAdapter);
+    recyclerView.setAdapter(adapter);
+    playlistHelper = new PlaylistHelper(adapter);
 
-    Toro.register(mRecyclerView);
+    final ToroStrategy baseStrategy = ToroStrategy.FIRST_PLAYABLE_TOP_DOWN;
+    ToroStrategy newStrategy = new ToroStrategy() {
+      boolean firstVideoObserved = false;
+
+      @Override public String getDescription() {
+        return "First video plays first";
+      }
+
+      @Override public ToroPlayer findBestPlayer(List<ToroPlayer> candidates) {
+        return baseStrategy.findBestPlayer(candidates);
+      }
+
+      @Override public boolean allowsToPlay(ToroPlayer player, ViewParent parent) {
+        boolean allowToPlay = (firstVideoObserved || player.getPlayOrder() == firstVideoPosition)
+            && baseStrategy.allowsToPlay(player, parent);
+        // Keep track of first video on top.
+        if (player.getPlayOrder() == firstVideoPosition) {
+          firstVideoObserved = true;
+        }
+        return allowToPlay;
+      }
+    };
+
+    playlistHelper.setStrategy(newStrategy);
   }
 
-  @Override protected void dispatchFragmentActive() {
+  @Override public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
+    super.onViewStateRestored(savedInstanceState);
     // Trick to force RecyclerView to scroll to first Video position. Note that it will trigger the
     // scroll every time the Fragment resumes, so comment out to disable.
-    mRecyclerView.postDelayed(new Runnable() {
+    recyclerView.postDelayed(new Runnable() {
       @Override public void run() {
-        if (mRecyclerView != null) {
-          mRecyclerView.smoothScrollToPosition(firstVideoPosition);
+        if (recyclerView != null) {
+          recyclerView.smoothScrollToPosition(firstVideoPosition);
         }
       }
     }, 200);
   }
 
-  @Override protected void dispatchFragmentInactive() {
+  @Override protected void dispatchFragmentActive() {
+    playlistHelper.registerPlayerListView(recyclerView);
+  }
 
+  @Override protected void dispatchFragmentInactive() {
+    playlistHelper.registerPlayerListView(null);
   }
 
   @Override public void onDestroyView() {
     super.onDestroyView();
-    Toro.unregister(mRecyclerView);
-  }
-
-  RecyclerView.LayoutManager getLayoutManager() {
-    return new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
-  }
-
-  RecyclerView.Adapter getAdapter() {
-    return new Basic2Adapter();
+    playlistHelper = null;
   }
 }

@@ -26,7 +26,6 @@ import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.ParserException;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.MediaSource;
-import im.ene.toro.Toro;
 import im.ene.toro.ToroAdapter;
 import im.ene.toro.ToroPlayer;
 import im.ene.toro.ToroUtil;
@@ -118,7 +117,7 @@ public abstract class ExoPlayerViewHolder extends ToroAdapter.ViewHolder impleme
 
   @Override public boolean wantsToPlay() {
     // Default implementation
-    return visibleAreaOffset() >= Toro.DEFAULT_OFFSET;
+    return visibleAreaOffset() >= DEFAULT_OFFSET;
   }
 
   @CallSuper @Override public void onVideoPrepared() {

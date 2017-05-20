@@ -53,6 +53,31 @@ public final class ToroUtil {
     return asList(asArray(array));
   }
 
+  static boolean doAllowsToPlay(ToroPlayer player, ViewParent parent) {
+    Rect windowRect = new Rect();
+    Rect parentRect = new Rect();
+    if (parent instanceof View) {
+      // 1. Get Window's vision from parent
+      ((View) parent).getWindowVisibleDisplayFrame(windowRect);
+      // 2. Get parent's global rect
+      ((View) parent).getGlobalVisibleRect(parentRect, null);
+    }
+    // 3. Get player global rect
+    View videoView = player.getPlayerView();
+    Rect videoRect = new Rect();
+    // Headache !!!
+    int[] screenLoc = new int[2];
+    videoView.getLocationOnScreen(screenLoc);
+    videoRect.left += screenLoc[0];
+    videoRect.right += screenLoc[0] + videoView.getWidth();
+    videoRect.top += screenLoc[1];
+    videoRect.bottom += screenLoc[1] + videoView.getHeight();
+
+    // Condition: window contains parent, and parent contains Video or parent intersects Video
+    return windowRect.contains(parentRect) && (parentRect.contains(videoRect)
+        || parentRect.intersect(videoRect));
+  }
+
   private static Rect getVideoRect(ToroPlayer player) {
     Rect rect = new Rect();
     Point offset = new Point();

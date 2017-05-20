@@ -27,7 +27,6 @@ import im.ene.toro.sample.feature.basic3.Basic3ListFragment;
 import im.ene.toro.sample.feature.basic4.Basic4ListFragment;
 import im.ene.toro.sample.feature.extended.ExtendedListFragment;
 import im.ene.toro.sample.feature.facebook.FacebookTimelineFragment;
-import im.ene.toro.sample.feature.legacy.LegacyListFragment;
 import im.ene.toro.sample.feature.single.SingleItemFragment;
 
 /**
@@ -52,8 +51,6 @@ public enum Feature {
       R.string.advance_sample_1_description),  //
   EXTENDED(ExtendedListFragment.class, R.string.extended_sample_1,
       R.string.extended_sample_1_description), //
-  LEGACY(LegacyListFragment.class, R.string.legacy_sample_1,
-      R.string.legacy_sample_1_description)  //
   ;
 
   public final Class<?> clazz;

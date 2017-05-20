@@ -23,7 +23,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import im.ene.toro.BaseAdapter;
-import im.ene.toro.Toro;
 import im.ene.toro.ToroAdapter;
 import im.ene.toro.sample.R;
 import im.ene.toro.sample.data.SimpleObject;
@@ -61,14 +60,12 @@ public class Basic3Adapter extends BaseAdapter<ToroAdapter.ViewHolder> {
         @Override public void onClick(View view) {
           // Do this for for playerView only.
           if (view == ((Basic3VideoViewHolder) viewHolder).getPlayerView()) {
-            // 1. Temporary disable the playback.
-            Toro.pause();
+            // TODO Temporary disable the playback.
             new AlertDialog.Builder(parent.getContext()).setTitle(R.string.app_name)
                 .setMessage(R.string.sample)
                 .setOnDismissListener(new DialogInterface.OnDismissListener() {
                   @Override public void onDismiss(DialogInterface dialogInterface) {
-                    // 2. Resume the playback.
-                    Toro.resume();
+                    // TODO Resume the playback.
                   }
                 })
                 .create()

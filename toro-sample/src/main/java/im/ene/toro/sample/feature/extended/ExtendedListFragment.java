@@ -16,28 +16,27 @@
 
 package im.ene.toro.sample.feature.extended;
 
-import android.annotation.TargetApi;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import im.ene.toro.Toro;
+import im.ene.toro.PlayerListView;
+import im.ene.toro.PlaylistHelper;
 import im.ene.toro.extended.SnapToTopLinearLayoutManager;
+import im.ene.toro.sample.BaseToroFragment;
 import im.ene.toro.sample.R;
 
 /**
  * Created by eneim on 6/30/16.
  */
-public class ExtendedListFragment extends Fragment {
+public class ExtendedListFragment extends BaseToroFragment {
 
-  protected RecyclerView mRecyclerView;
-  protected RecyclerView.Adapter mAdapter;
+  protected PlayerListView recyclerView;
+  protected ExtendedAdapter adapter;
+  private PlaylistHelper playlistHelper;
 
   public static ExtendedListFragment newInstance() {
     return new ExtendedListFragment();
@@ -48,37 +47,33 @@ public class ExtendedListFragment extends Fragment {
     return inflater.inflate(R.layout.generic_recycler_view, container, false);
   }
 
-  @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2) @Override
-  public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+  @Override public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
-    mRecyclerView = (RecyclerView) view.findViewById(R.id.recycler_view);
-    RecyclerView.LayoutManager layoutManager = getLayoutManager();
-    mRecyclerView.setLayoutManager(layoutManager);
-    if (layoutManager instanceof LinearLayoutManager) {
-      mRecyclerView.addItemDecoration(new DividerItemDecoration(getContext(),
-          ((LinearLayoutManager) layoutManager).getOrientation()));
-    }
+    recyclerView = (PlayerListView) view.findViewById(R.id.recycler_view);
+    SnapToTopLinearLayoutManager layoutManager =
+        new SnapToTopLinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
+    recyclerView.setLayoutManager(layoutManager);
+    recyclerView.addItemDecoration(
+        new DividerItemDecoration(getContext(), layoutManager.getOrientation()));
 
-    mAdapter = getAdapter();
-    mRecyclerView.setHasFixedSize(false);
-    mRecyclerView.setAdapter(mAdapter);
+    adapter = new ExtendedAdapter();
+    recyclerView.setAdapter(adapter);
+
+    playlistHelper = new PlaylistHelper(adapter);
   }
 
-  @Override public void onResume() {
-    super.onResume();
-    Toro.register(mRecyclerView);
+  @Override protected void dispatchFragmentActive() {
+    super.dispatchFragmentActive();
+    playlistHelper.registerPlayerListView(recyclerView);
   }
 
-  @Override public void onPause() {
-    super.onPause();
-    Toro.unregister(mRecyclerView);
+  @Override protected void dispatchFragmentInactive() {
+    super.dispatchFragmentInactive();
+    playlistHelper.registerPlayerListView(null);
   }
 
-  RecyclerView.LayoutManager getLayoutManager() {
-    return new SnapToTopLinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
-  }
-
-  RecyclerView.Adapter getAdapter() {
-    return new ExtendedAdapter();
+  @Override public void onDestroyView() {
+    super.onDestroyView();
+    playlistHelper = null;
   }
 }

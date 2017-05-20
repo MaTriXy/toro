@@ -17,7 +17,6 @@
 package im.ene.toro;
 
 import android.content.Context;
-import android.support.annotation.CallSuper;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -28,9 +27,6 @@ import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import static im.ene.toro.Toro.getManager;
-import static im.ene.toro.Toro.getStrategy;
 
 /**
  * @author eneim.
@@ -51,40 +47,6 @@ public class PlayerListView extends RecyclerView {
     super(context, attrs, defStyle);
   }
 
-  RecyclerListener internalRecyclerListener;
-
-  @Override protected void onAttachedToWindow() {
-    super.onAttachedToWindow();
-    if (internalRecyclerListener == null) {
-      internalRecyclerListener = new RecyclerListener() {
-        @Override public void onViewRecycled(ViewHolder holder) {
-          PlayerListView.this.onViewRecycled(holder);
-        }
-      };
-
-      super.setRecyclerListener(internalRecyclerListener);
-    }
-  }
-
-  @Override protected void onDetachedFromWindow() {
-    super.onDetachedFromWindow();
-    internalRecyclerListener = null;
-  }
-
-  @CallSuper @Override public void setRecyclerListener(final RecyclerListener listener) {
-    super.setRecyclerListener(new RecyclerListener() {
-      @Override public void onViewRecycled(ViewHolder holder) {
-        if (listener != null) {
-          listener.onViewRecycled(holder);
-        }
-
-        if (internalRecyclerListener != null) {
-          internalRecyclerListener.onViewRecycled(holder);
-        }
-      }
-    });
-  }
-
   @Override public void onChildAttachedToWindow(final View child) {
     super.onChildAttachedToWindow(child);
     ViewHolder holder = getChildViewHolder(child);
@@ -94,29 +56,28 @@ public class PlayerListView extends RecyclerView {
 
     final ToroPlayer player = (ToroPlayer) holder;
 
-    final PlayerManager manager = getManager(this);
-    if (manager == null) {
+    if (playerManager == null) {
       return;
     }
 
-    if (manager.getPlayer() == player) {
+    if (playerManager.getPlayer() == player) {
       if (!player.isPrepared()) {
         player.preparePlayer(false);
       } else {
-        manager.restorePlaybackState(player.getMediaId());
-        manager.startPlayback();
+        playerManager.restorePlaybackState(player.getMediaId());
+        playerManager.startPlayback();
       }
-    } else if (manager.getPlayer() == null) {
+    } else if (playerManager.getPlayer() == null) {
       child.getViewTreeObserver().addOnGlobalLayoutListener(new OnGlobalLayoutListener() {
         @Override public void onGlobalLayout() {
           child.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-          if (player.wantsToPlay() && getStrategy().allowsToPlay(player, PlayerListView.this)) {
+          if (player.wantsToPlay() && strategy.allowsToPlay(player, PlayerListView.this)) {
             if (!player.isPrepared()) {
               player.preparePlayer(false);
             } else {
-              manager.setPlayer(player);
-              manager.restorePlaybackState(player.getMediaId());
-              manager.startPlayback();
+              playerManager.setPlayer(player);
+              playerManager.restorePlaybackState(player.getMediaId());
+              playerManager.startPlayback();
             }
           }
         }
@@ -127,34 +88,32 @@ public class PlayerListView extends RecyclerView {
   // Unused for now
   @Override public void onChildDetachedFromWindow(View child) {
     super.onChildDetachedFromWindow(child);
-  }
-
-  void onViewRecycled(ViewHolder holder) {
-    if (!(holder instanceof ToroPlayer)) {
+    ViewHolder holder = getChildViewHolder(child);
+    if (holder == null || !(holder instanceof ToroPlayer)) {
       return;
     }
 
     final ToroPlayer player = (ToroPlayer) holder;
 
-    PlayerManager manager = getManager(this);
     // Manually save Video state
-    if (manager != null && player == manager.getPlayer()) {
+    if (playerManager != null && player == playerManager.getPlayer()) {
       if (player.isPlaying()) {
-        manager.savePlaybackState(player.getMediaId(), player.getCurrentPosition(),
-            player.getDuration());
-        manager.pausePlayback();
+        playerManager.savePlaybackState( //
+            player.getMediaId(), player.getCurrentPosition(), player.getDuration());
+        playerManager.pausePlayback();
       }
       // Detach current Player
-      manager.setPlayer(null);
+      playerManager.setPlayer(null);
     }
-    // Release player.
-    player.releasePlayer();
+
+    player.stop();
   }
 
   // handle scrolling events
 
   private final List<ToroPlayer> candidates = new ArrayList<>();
 
+  // unused
   @Override public void onScrolled(int dx, int dy) {
     super.onScrolled(dx, dy);
   }
@@ -165,7 +124,6 @@ public class PlayerListView extends RecyclerView {
       return;
     }
 
-    PlayerManager playerManager = getManager(this);
     if (playerManager == null) {
       return;
     }
@@ -175,7 +133,7 @@ public class PlayerListView extends RecyclerView {
     // Check current playing position
     final ToroPlayer currentPlayer = playerManager.getPlayer();
     if (currentPlayer != null && currentPlayer.getPlayOrder() != RecyclerView.NO_POSITION) {
-      if (currentPlayer.wantsToPlay() && getStrategy().allowsToPlay(currentPlayer, this)) {
+      if (currentPlayer.wantsToPlay() && this.strategy.allowsToPlay(currentPlayer, this)) {
         candidates.add(currentPlayer);
       }
     }
@@ -211,11 +169,11 @@ public class PlayerListView extends RecyclerView {
         (firstPosition != RecyclerView.NO_POSITION || lastPosition != RecyclerView.NO_POSITION)) {
       for (int i = firstPosition; i <= lastPosition; i++) {
         // Detected a view holder for media player
-        RecyclerView.ViewHolder viewHolder = findViewHolderForAdapterPosition(i);
-        if (viewHolder != null && viewHolder instanceof ToroPlayer) {
-          ToroPlayer candidate = (ToroPlayer) viewHolder;
+        RecyclerView.ViewHolder holder = findViewHolderForAdapterPosition(i);
+        if (holder != null && holder instanceof ToroPlayer) {
+          ToroPlayer candidate = (ToroPlayer) holder;
           // check candidate's condition
-          if (candidate.wantsToPlay() && getStrategy().allowsToPlay(candidate, this)) {
+          if (candidate.wantsToPlay() && this.strategy.allowsToPlay(candidate, this)) {
             // Have a new candidate who can play
             if (!candidates.contains(candidate)) {
               candidates.add(candidate);
@@ -226,7 +184,7 @@ public class PlayerListView extends RecyclerView {
     }
 
     // Ask strategy to elect one
-    final ToroPlayer electedPlayer = getStrategy().findBestPlayer(candidates);
+    final ToroPlayer electedPlayer = this.strategy.findBestPlayer(candidates);
 
     if (electedPlayer == currentPlayer) {
       // No thing changes, no new President. Let it go
@@ -263,6 +221,60 @@ public class PlayerListView extends RecyclerView {
       playerManager.setPlayer(electedPlayer);
       playerManager.restorePlaybackState(electedPlayer.getMediaId());
       playerManager.startPlayback();
+    }
+  }
+
+  private PlayerManager playerManager;
+  private ToroStrategy strategy;
+
+  void setPlayerManager(PlayerManager playerManager) {
+    if (this.playerManager == playerManager) {
+      return;
+    }
+
+    ToroPlayer currentPlayer = null;
+    PlaybackState currentState = null;
+    if (this.playerManager != null) {
+      currentPlayer = this.playerManager.getPlayer();
+      if (currentPlayer != null) {
+        this.playerManager.savePlaybackState(currentPlayer.getMediaId(),
+            currentPlayer.getCurrentPosition(), currentPlayer.getDuration());
+        this.playerManager.pausePlayback();
+        currentState = this.playerManager.getPlaybackState(currentPlayer.getMediaId());
+        this.playerManager.setPlayer(null);
+      }
+    }
+
+    this.playerManager = playerManager;
+    if (this.playerManager != null) {
+      if (currentPlayer != null && currentState != null) {
+        this.playerManager.savePlaybackState(currentState.getMediaId(), currentState.getPosition(),
+            currentState.getDuration());
+      }
+      onScrollStateChanged(RecyclerView.SCROLL_STATE_IDLE);
+    }
+  }
+
+  PlayerManager getPlayerManager() {
+    return playerManager;
+  }
+
+  ToroStrategy getStrategy() {
+    return strategy;
+  }
+
+  void setStrategy(ToroStrategy strategy) {
+    if (strategy == null) {
+      throw new IllegalArgumentException("Playback strategy must not be null.");
+    }
+
+    if (this.strategy == strategy) {
+      return;
+    }
+
+    this.strategy = strategy;
+    if (this.playerManager != null) {
+      onScrollStateChanged(RecyclerView.SCROLL_STATE_IDLE);
     }
   }
 }

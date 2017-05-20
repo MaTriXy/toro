@@ -35,7 +35,8 @@ import butterknife.ButterKnife;
 import butterknife.Unbinder;
 import com.google.android.exoplayer2.C;
 import im.ene.toro.PlaybackState;
-import im.ene.toro.Toro;
+import im.ene.toro.PlayerListView;
+import im.ene.toro.PlaylistHelper;
 import im.ene.toro.ToroPlayer;
 import im.ene.toro.ToroStrategy;
 import im.ene.toro.extended.SnapToTopLinearLayoutManager;
@@ -89,8 +90,6 @@ public class FacebookPlaylistFragment extends DialogFragment implements BigPlaye
     return R.style.Toro_Theme_Playlist;
   }
 
-  ToroStrategy strategyToRestore;
-
   BigPlayerFragment bigPlayerFragment;
   private WindowManager windowManager;
   private Callback callback;
@@ -120,34 +119,11 @@ public class FacebookPlaylistFragment extends DialogFragment implements BigPlaye
     if (this.baseItem == null) {
       dismissAllowingStateLoss();
     }
-
-    strategyToRestore = Toro.getStrategy();
-    Toro.setStrategy(new ToroStrategy() {
-      boolean isFirstPlayerDone = false;
-
-      @Override public String getDescription() {
-        return "First video plays first";
-      }
-
-      @Override public ToroPlayer findBestPlayer(List<ToroPlayer> candidates) {
-        return strategyToRestore.findBestPlayer(candidates);
-      }
-
-      @Override public boolean allowsToPlay(ToroPlayer player, ViewParent parent) {
-        boolean allowToPlay = (isFirstPlayerDone || player.getPlayOrder() == 0)  //
-            && strategyToRestore.allowsToPlay(player, parent);
-
-        // A work-around to keep track of first video on top.
-        if (player.getPlayOrder() == 0) {
-          isFirstPlayerDone = true;
-        }
-        return allowToPlay;
-      }
-    });
   }
 
-  @BindView(R.id.recycler_view) RecyclerView recyclerView;
+  @BindView(R.id.recycler_view) PlayerListView recyclerView;
   MoreVideosAdapter adapter;
+  PlaylistHelper playlistHelper;
   Unbinder unbinder;
 
   @Nullable @Override
@@ -168,6 +144,31 @@ public class FacebookPlaylistFragment extends DialogFragment implements BigPlaye
         new SnapToTopLinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false);
     recyclerView.setLayoutManager(layoutManager);
     recyclerView.setAdapter(adapter);
+
+    final ToroStrategy baseStrategy = ToroStrategy.MOST_VISIBLE_TOP_DOWN;
+    ToroStrategy newStrategy = new ToroStrategy() {
+      boolean isFirstPlayerDone = false;
+
+      @Override public String getDescription() {
+        return "First video plays first";
+      }
+
+      @Override public ToroPlayer findBestPlayer(List<ToroPlayer> candidates) {
+        return baseStrategy.findBestPlayer(candidates);
+      }
+
+      @Override public boolean allowsToPlay(ToroPlayer player, ViewParent parent) {
+        boolean allowToPlay = (isFirstPlayerDone || player.getPlayOrder() == 0)  //
+            && baseStrategy.allowsToPlay(player, parent);
+
+        // A work-around to keep track of first video on top.
+        if (player.getPlayOrder() == 0) {
+          isFirstPlayerDone = true;
+        }
+        return allowToPlay;
+      }
+    };
+    playlistHelper = new PlaylistHelper(adapter, newStrategy);
 
     // Maybe DI in real practice, not here.
     MoreVideoRepo videoRepo = new MoreVideoRepo(baseItem);
@@ -203,6 +204,8 @@ public class FacebookPlaylistFragment extends DialogFragment implements BigPlaye
     outState.putParcelableArrayList(ARGS_PLAYBACK_STATES, adapter.getPlaybackStates());
   }
 
+  SavedPlayback latestState;
+
   @SuppressWarnings("Duplicates") @Override
   public void onViewStateRestored(@Nullable Bundle state) {
     super.onViewStateRestored(state);
@@ -216,26 +219,12 @@ public class FacebookPlaylistFragment extends DialogFragment implements BigPlaye
       }
     }
 
+    // in landscape
+    latestState = state != null && state.containsKey(ARGS_PLAYBACK_LATEST)
+        ? (SavedPlayback) state.getParcelable(ARGS_PLAYBACK_LATEST) : null;
+
     if (bigPlayerFragment != null) {
       bigPlayerFragment.dismissAllowingStateLoss();
-    }
-
-    if (windowManager.getDefaultDisplay().getRotation() % 180 == 0) {
-      Toro.register(recyclerView);
-    } else {
-      // in landscape
-      SavedPlayback latestState = state != null && state.containsKey(ARGS_PLAYBACK_LATEST)
-          ? (SavedPlayback) state.getParcelable(ARGS_PLAYBACK_LATEST) : null;
-
-      if (latestState == null) {
-        Toro.register(recyclerView);
-        return;
-      }
-
-      VideoItem videoItem = latestState.videoItem;
-      bigPlayerFragment =
-          BigPlayerFragment.newInstance(videoItem.getVideoUrl(), latestState.playbackState);
-      bigPlayerFragment.show(getChildFragmentManager(), BigPlayerFragment.TAG);
     }
   }
 
@@ -269,16 +258,28 @@ public class FacebookPlaylistFragment extends DialogFragment implements BigPlaye
 
   @Override public void onDestroyView() {
     super.onDestroyView();
-    Toro.setStrategy(strategyToRestore);
+    playlistHelper = null;
     unbinder.unbind();
   }
 
   private void dispatchFragmentActive() {
-    Toro.register(recyclerView);
+    if (windowManager.getDefaultDisplay().getRotation() % 180 == 0) {
+      playlistHelper.registerPlayerListView(recyclerView);
+    } else {
+      if (latestState == null) {
+        playlistHelper.registerPlayerListView(recyclerView);
+        return;
+      }
+
+      VideoItem videoItem = latestState.videoItem;
+      bigPlayerFragment =
+          BigPlayerFragment.newInstance(videoItem.getVideoUrl(), latestState.playbackState);
+      bigPlayerFragment.show(getChildFragmentManager(), BigPlayerFragment.TAG);
+    }
   }
 
   private void dispatchFragmentInactive() {
-    Toro.unregister(recyclerView);
+    playlistHelper.registerPlayerListView(null);
   }
 
   @Override public void onDetach() {
@@ -296,9 +297,7 @@ public class FacebookPlaylistFragment extends DialogFragment implements BigPlaye
   }
 
   @Override public void onBigPlayerAttached() {
-    if (recyclerView != null) {
-      Toro.unregister(recyclerView);
-    }
+    playlistHelper.registerPlayerListView(null);
   }
 
   @Override public void onBigPlayerDetached(@NonNull PlaybackState state) {

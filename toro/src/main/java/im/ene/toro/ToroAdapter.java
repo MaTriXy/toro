@@ -57,7 +57,7 @@ public abstract class ToroAdapter<VH extends ToroAdapter.ViewHolder>
     holder.onViewHolderBound();
   }
 
-  // Toro requires this method to return item's unique Id.
+  // Requires this method to return item's unique Id.
   @Override public long getItemId(int position) {
     return position;
   }

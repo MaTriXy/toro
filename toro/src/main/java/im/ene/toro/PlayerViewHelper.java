@@ -51,7 +51,12 @@ public abstract class PlayerViewHelper {
    * playback if possible.
    */
   @CallSuper public void onAttachedToWindow() {
-    final PlayerManager manager = getPlayerManager(itemView.getParent());
+    ViewParent viewParent = itemView.getParent();
+    if (!(viewParent instanceof PlayerListView)) {
+      return;
+    }
+    final PlayerListView playerListView = (PlayerListView) viewParent;
+    final PlayerManager manager = playerListView.getPlayerManager();
     if (manager == null) {
       return;
     }
@@ -68,7 +73,7 @@ public abstract class PlayerViewHelper {
         @Override public void onGlobalLayout() {
           itemView.getViewTreeObserver().removeOnGlobalLayoutListener(this);
           if (player.wantsToPlay() && //
-              Toro.getStrategy().allowsToPlay(player, itemView.getParent())) {
+              playerListView.getStrategy().allowsToPlay(player, itemView.getParent())) {
             //noinspection Duplicates
             if (!player.isPrepared()) {
               player.preparePlayer(false);
@@ -87,9 +92,10 @@ public abstract class PlayerViewHelper {
    * Callback from {@link RecyclerView.Adapter#onViewDetachedFromWindow(RecyclerView.ViewHolder)}
    */
   @CallSuper public void onDetachedFromWindow() {
-    PlayerManager manager = Toro.getManager(itemView.getParent());
+    PlayerManager manager = itemView.getParent() instanceof PlayerListView
+        ? ((PlayerListView) itemView.getParent()).getPlayerManager() : null;
     // Manually save Video state
-    if (manager != null) {
+    if (manager != null && manager.getPlayer() == player) {
       if (player.isPlaying()) {
         manager.savePlaybackState( //
             player.getMediaId(), player.getCurrentPosition(), player.getDuration());
@@ -117,23 +123,75 @@ public abstract class PlayerViewHelper {
    * @param parent parent which holds current ViewHolder
    */
   @CallSuper protected void onPrepared(@NonNull View itemView, @Nullable ViewParent parent) {
-    Toro.sInstance.onMediaPrepared(this.player, itemView, parent);
+    if (!(parent instanceof PlayerListView)) {
+      return;
+    }
+
+    PlayerListView playerListView = (PlayerListView) parent;
+
+    if (!player.wantsToPlay() || !playerListView.getStrategy().allowsToPlay(player, parent)) {
+      return;
+    }
+
+    PlayerManager manager = playerListView.getPlayerManager();
+    if (manager == null) {
+      return;
+    }
+
+    // 1. Check if current playerManager is managing this player
+    if (player == manager.getPlayer()) {
+      // player.isPlaying() is always false here
+      manager.restorePlaybackState(player.getMediaId());
+      manager.startPlayback();
+    } else {
+      // There is no current player, but this guy is prepared, so let's him go ...
+      if (manager.getPlayer() == null) {
+        // ... if it's possible
+        manager.setPlayer(player);
+        // player.isPrepared() is always true here
+        manager.restorePlaybackState(player.getMediaId());
+        manager.startPlayback();
+      }
+    }
   }
 
   @SuppressWarnings("WeakerAccess") @Nullable
   protected final PlayerManager getPlayerManager(ViewParent parent) {
-    return Toro.getManager(parent);
+    return parent != null && parent instanceof PlayerListView
+        ? ((PlayerListView) parent).getPlayerManager() : null;
+  }
+
+  protected final ToroStrategy getStrategy(ViewParent parent) {
+    return parent != null && parent instanceof PlayerListView
+        ? ((PlayerListView) parent).getStrategy() : null;
   }
 
   /**
    * Complete the playback
    */
   @CallSuper protected void onCompletion() {
-    Toro.sInstance.onPlaybackCompletion(this.player);
+    // 1. Internal jobs: find the playerManager for corresponding player.
+    PlayerManager manager = getPlayerManager(itemView.getParent());
+    // Update video position as 0
+    if (manager != null) {
+      manager.savePlaybackState(player.getMediaId(), 0L, player.getDuration());
+      manager.setPlayer(null);
+    }
   }
 
   protected final boolean onPlaybackError(Exception error) {
-    return this.player.onPlaybackError(error) &&  //
-        Toro.sInstance.onPlaybackError(this.player, error);
+    boolean childHandled = this.player.onPlaybackError(error);
+    if (childHandled) {
+      PlayerManager manager = getPlayerManager(itemView.getParent());
+      if (manager != null) {
+        manager.savePlaybackState(player.getMediaId(), 0L, player.getDuration());
+        manager.pausePlayback();
+        manager.setPlayer(null);
+      }
+
+      return true;
+    } else {
+      return false;
+    }
   }
 }

@@ -18,7 +18,6 @@ package im.ene.toro;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v7.widget.RecyclerView;
 import java.util.ArrayList;
 
 /**
@@ -41,9 +40,9 @@ public interface PlayerManager extends Removable {
 
   /**
    * Set current video player. There would be at most one Video player at a time.
-   * Implement constraint: an idling or completed player must not belong to any player manager.
+   * Implement constraint: an idling or completed player must not belong to any player playerManager.
    *
-   * @param player the current Video Player of this manager
+   * @param player the current Video Player of this playerManager
    */
   void setPlayer(ToroPlayer player);
 
@@ -51,15 +50,8 @@ public interface PlayerManager extends Removable {
 
   /* BEGIN Setup own life cycle */
 
-  /**
-   * Called after being registered to a RecyclerView. See {@link Toro#register(RecyclerView)}
-   */
   void onRegistered();
 
-  /**
-   * Called before being unregistered from a RecyclerView. See {@link
-   * Toro#unregister(RecyclerView)}
-   */
   void onUnregistered();
 
   /* END Setup own life cycle */

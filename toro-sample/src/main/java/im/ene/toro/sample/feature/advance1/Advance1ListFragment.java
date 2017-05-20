@@ -20,24 +20,25 @@ import android.annotation.TargetApi;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import com.azoft.carousellayoutmanager.CarouselLayoutManager;
 import com.azoft.carousellayoutmanager.CarouselZoomPostLayoutListener;
 import com.azoft.carousellayoutmanager.CenterScrollListener;
-import im.ene.toro.Toro;
+import im.ene.toro.PlayerListView;
+import im.ene.toro.PlaylistHelper;
+import im.ene.toro.sample.BaseToroFragment;
 import im.ene.toro.sample.R;
 
 /**
  * Created by eneim on 6/30/16.
  */
-public class Advance1ListFragment extends Fragment {
+public class Advance1ListFragment extends BaseToroFragment {
 
-  protected RecyclerView mRecyclerView;
-  protected RecyclerView.Adapter mAdapter;
+  protected PlayerListView recyclerView;
+  protected Advance1Adapter adapter;
+  private PlaylistHelper playlistHelper;
 
   public static Advance1ListFragment newInstance() {
     return new Advance1ListFragment();
@@ -51,35 +52,34 @@ public class Advance1ListFragment extends Fragment {
   @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR2) @Override
   public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
-    mRecyclerView = (RecyclerView) view.findViewById(R.id.recycler_view);
-    mRecyclerView.getLayoutParams().height =
+    recyclerView = (PlayerListView) view.findViewById(R.id.recycler_view);
+    recyclerView.getLayoutParams().height =
         getResources().getDimensionPixelSize(R.dimen.carousel_recycler_view_height);
-    mRecyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-    Advance1LayoutManager layoutManager = getLayoutManager();
+    recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+    Advance1LayoutManager layoutManager = new Advance1LayoutManager(CarouselLayoutManager.VERTICAL);
     layoutManager.setPostLayoutListener(new CarouselZoomPostLayoutListener());
 
-    mRecyclerView.setLayoutManager(layoutManager);
-    mAdapter = getAdapter();
-    mRecyclerView.setHasFixedSize(true);
-    mRecyclerView.setAdapter(mAdapter);
-    mRecyclerView.addOnScrollListener(new CenterScrollListener());
+    recyclerView.setLayoutManager(layoutManager);
+    adapter = new Advance1Adapter();
+    recyclerView.setHasFixedSize(true);
+    recyclerView.setAdapter(adapter);
+    recyclerView.addOnScrollListener(new CenterScrollListener());
+
+    playlistHelper = new PlaylistHelper(adapter);
   }
 
-  @Override public void onResume() {
-    super.onResume();
-    Toro.register(mRecyclerView);
+  @Override protected void dispatchFragmentActive() {
+    super.dispatchFragmentActive();
+    playlistHelper.registerPlayerListView(recyclerView);
   }
 
-  @Override public void onPause() {
-    super.onPause();
-    Toro.unregister(mRecyclerView);
+  @Override protected void dispatchFragmentInactive() {
+    super.dispatchFragmentInactive();
+    playlistHelper.registerPlayerListView(null);
   }
 
-  Advance1LayoutManager getLayoutManager() {
-    return new Advance1LayoutManager(CarouselLayoutManager.VERTICAL);
-  }
-
-  RecyclerView.Adapter getAdapter() {
-    return new Advance1Adapter();
+  @Override public void onDestroyView() {
+    super.onDestroyView();
+    playlistHelper = null;
   }
 }

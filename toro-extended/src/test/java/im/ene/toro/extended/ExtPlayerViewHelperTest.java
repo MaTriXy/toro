@@ -16,11 +16,9 @@
 
 package im.ene.toro.extended;
 
-import im.ene.toro.Toro;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 /**
@@ -29,7 +27,6 @@ import org.powermock.modules.junit4.PowerMockRunner;
  */
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(Toro.class)
 public class ExtPlayerViewHelperTest {
 
   @Test

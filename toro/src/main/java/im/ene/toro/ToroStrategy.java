@@ -18,7 +18,11 @@ package im.ene.toro;
 
 import android.support.annotation.Nullable;
 import android.view.ViewParent;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+
+import static im.ene.toro.ToroUtil.doAllowsToPlay;
 
 /**
  * Created by eneim on 2/1/16.
@@ -51,4 +55,120 @@ public interface ToroStrategy {
    * otherwise.
    */
   boolean allowsToPlay(ToroPlayer player, ViewParent parent);
+
+  ToroStrategy REST = new ToroStrategy() {
+    @Override public String getDescription() {
+      return "'Do nothing' Strategy";
+    }
+
+    @Override public ToroPlayer findBestPlayer(List<ToroPlayer> candidates) {
+      return null;
+    }
+
+    @Override public boolean allowsToPlay(ToroPlayer player, ViewParent parent) {
+      return false;
+    }
+  };
+
+  ToroStrategy MOST_VISIBLE_TOP_DOWN = new ToroStrategy() {
+
+    @Override public String getDescription() {
+      return "Most visible item, top - down";
+    }
+
+    @Nullable @Override public ToroPlayer findBestPlayer(List<ToroPlayer> candidates) {
+      if (candidates == null || candidates.size() < 1) {
+        return null;
+      }
+
+      // 1. Sort candidates by the order of player
+      Collections.sort(candidates, new Comparator<ToroPlayer>() {
+        @Override public int compare(ToroPlayer lhs, ToroPlayer rhs) {
+          return lhs.getPlayOrder() - rhs.getPlayOrder();
+        }
+      });
+
+      // 2. Sort candidates by the visible offset
+      Collections.sort(candidates, new Comparator<ToroPlayer>() {
+        @Override public int compare(ToroPlayer lhs, ToroPlayer rhs) {
+          return Float.compare(rhs.visibleAreaOffset(), lhs.visibleAreaOffset());
+        }
+      });
+
+      return candidates.get(0);
+    }
+
+    @Override public boolean allowsToPlay(ToroPlayer player, ViewParent parent) {
+      return doAllowsToPlay(player, parent);
+    }
+  };
+
+  ToroStrategy MOST_VISIBLE_TOP_DOWN_KEEP_LAST = new ToroStrategy() {
+    @Override public String getDescription() {
+      return "Most visible item, top - down. Keep last playing item.";
+    }
+
+    @Nullable @Override public ToroPlayer findBestPlayer(List<ToroPlayer> candidates) {
+      if (candidates == null || candidates.size() < 1) {
+        return null;
+      }
+
+      // Sort candidates by the visible offset
+      Collections.sort(candidates, new Comparator<ToroPlayer>() {
+        @Override public int compare(ToroPlayer lhs, ToroPlayer rhs) {
+          return Float.compare(rhs.visibleAreaOffset(), lhs.visibleAreaOffset());
+        }
+      });
+
+      return candidates.get(0);
+    }
+
+    @Override public boolean allowsToPlay(ToroPlayer player, ViewParent parent) {
+      return doAllowsToPlay(player, parent);
+    }
+  };
+
+  ToroStrategy FIRST_PLAYABLE_TOP_DOWN = new ToroStrategy() {
+    @Override public String getDescription() {
+      return "First playable item, top - down";
+    }
+
+    @Nullable @Override public ToroPlayer findBestPlayer(List<ToroPlayer> candidates) {
+      if (candidates == null || candidates.size() < 1) {
+        return null;
+      }
+
+      // 1. Sort candidates by the order of player
+      Collections.sort(candidates, new Comparator<ToroPlayer>() {
+        @Override public int compare(ToroPlayer lhs, ToroPlayer rhs) {
+          return lhs.getPlayOrder() - rhs.getPlayOrder();
+        }
+      });
+
+      return candidates.get(0);
+    }
+
+    @Override public boolean allowsToPlay(ToroPlayer player, ViewParent parent) {
+      return doAllowsToPlay(player, parent);
+    }
+  };
+
+  ToroStrategy FIRST_PLAYABLE_TOP_DOWN_KEEP_LAST = new ToroStrategy() {
+
+    @Override public String getDescription() {
+      return "First playable item, top - down. Keep last playing item.";
+    }
+
+    @Nullable @Override public ToroPlayer findBestPlayer(List<ToroPlayer> candidates) {
+      if (candidates == null || candidates.size() < 1) {
+        return null;
+      }
+
+      return candidates.get(0);
+    }
+
+    @Override public boolean allowsToPlay(ToroPlayer player, ViewParent parent) {
+      return doAllowsToPlay(player, parent);
+    }
+  };
 }

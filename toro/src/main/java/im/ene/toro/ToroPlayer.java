@@ -30,6 +30,8 @@ import android.view.View;
  */
 public interface ToroPlayer extends MediaPlayer {
 
+  double DEFAULT_OFFSET = 0.75;
+
   boolean isPrepared();
 
   /**

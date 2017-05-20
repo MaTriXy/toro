@@ -16,14 +16,12 @@
 
 package im.ene.toro.sample.feature.extended;
 
-import android.media.MediaPlayer;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.VideoView;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
@@ -32,15 +30,12 @@ import im.ene.toro.exoplayer2.ExoPlayerView;
 import im.ene.toro.extended.ExtPlayerViewHolder;
 import im.ene.toro.sample.R;
 import im.ene.toro.sample.data.SimpleVideoObject;
-import im.ene.toro.sample.feature.legacy.LegacyListFragment;
 
 /**
  * Created by eneim on 6/29/16.
  *
  * This sample use {@link ExoPlayerView} API to play medias. So by default, Video ViewHolder
- * requires an implemented Component of that interface. For samples those use legacy API such as
- * {@link VideoView} or {@link MediaPlayer}, please take a look at {@link LegacyListFragment}
- * implementations.
+ * requires an implemented Component of that interface.
  */
 public class ExtendedVideoViewHolder extends ExtPlayerViewHolder {
 

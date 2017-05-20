@@ -26,7 +26,7 @@ import android.support.v7.widget.RecyclerView;
  */
 final class MediaDataObserver extends RecyclerView.AdapterDataObserver implements Removable {
 
-  @SuppressWarnings("unused") private static final String TAG = Toro.TAG + "@Observer";
+  @SuppressWarnings("unused") private static final String TAG ="ToroLib:Observer";
   private PlayerManager manager;
 
   MediaDataObserver(@NonNull PlayerManager manager) {

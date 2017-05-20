@@ -20,7 +20,6 @@ import android.app.Application;
 import com.crashlytics.android.Crashlytics;
 import com.crashlytics.android.ndk.CrashlyticsNdk;
 import com.squareup.leakcanary.LeakCanary;
-import im.ene.toro.Toro;
 import io.fabric.sdk.android.Fabric;
 
 /**
@@ -37,7 +36,6 @@ public class ToroApp extends Application {
     }
     sApp = this;
     Fabric.with(this, new Crashlytics(), new CrashlyticsNdk());
-    Toro.init(this);
   }
 
   public static ToroApp getApp() {
