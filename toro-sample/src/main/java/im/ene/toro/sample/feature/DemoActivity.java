@@ -32,7 +32,7 @@ import java.lang.reflect.Method;
 
 public class DemoActivity extends BaseActivity {
 
-  static final String DEMO_FEATURE = "torolib:demo:page_name";
+  static final String DEMO_FEATURE = "toro:demo:page_name";
 
   public static Intent createIntent(Context parent, Feature feature) {
     Intent intent = new Intent(parent, DemoActivity.class);
