@@ -162,4 +162,11 @@ public class BaseFragment extends Fragment {
     super.onAttachFragment(childFragment);
     if (D) Log.wtf(TAG, "onAttachFragment() called with: childFragment = [" + childFragment + "]");
   }
+
+  @Override public void setUserVisibleHint(boolean isVisibleToUser) {
+    super.setUserVisibleHint(isVisibleToUser);
+    if (D) {
+      Log.wtf(TAG, "setUserVisibleHint() called with: isVisibleToUser = [" + isVisibleToUser + "]");
+    }
+  }
 }

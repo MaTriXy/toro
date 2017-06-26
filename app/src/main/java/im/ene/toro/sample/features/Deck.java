@@ -18,6 +18,9 @@ package im.ene.toro.sample.features;
 
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
+import im.ene.toro.sample.features.basic.BasicListFragment;
+import im.ene.toro.sample.features.facebook.timeline.TimelineFragment;
+import im.ene.toro.sample.features.stateful.StatefulPlaylistFragment;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -36,7 +39,8 @@ public final class Deck {
     //noinspection TryWithIdenticalCatches
     try {
       //noinspection ConfusingArgumentToVarargsMethod
-      Method method = fragmentClass.getMethod("newInstance", null); // <-- must implement this method.
+      Method method =
+          fragmentClass.getMethod("newInstance", null); // <-- must implement this method.
       //noinspection ConfusingArgumentToVarargsMethod
       fragment = (Fragment) method.invoke(null, null);
     } catch (NoSuchMethodException e) {
@@ -68,11 +72,43 @@ public final class Deck {
     }
   }
 
+  @SuppressWarnings("ConfusingArgumentToVarargsMethod")
+  public static Fragment create(Class<?> fragmentClass) {
+    Fragment fragment = DummyFragment.newInstance();  // fallback
+    try {
+      Method method = fragmentClass.getMethod("newInstance", null);
+      //noinspection ConfusingArgumentToVarargsMethod
+      fragment = (Fragment) method.invoke(null, null);
+    } catch (NoSuchMethodException e) {
+      e.printStackTrace();
+    } catch (IllegalAccessException e) {
+      e.printStackTrace();
+    } catch (InvocationTargetException e) {
+      e.printStackTrace();
+    }
+
+    return fragment;
+  }
+
   // naming this exception by intent, for log filtering purpose.
   @SuppressWarnings("WeakerAccess") public static class ToroDemoException extends Exception {
 
     public ToroDemoException(String message, Throwable cause) {
       super(message, cause);
+    }
+  }
+
+  enum Slides {
+    BASIC("Basic", BasicListFragment.class), //
+    STATEFUL("Stateful", StatefulPlaylistFragment.class), //
+    TIMELINE("Timeline", TimelineFragment.class);
+
+    public final Class<? extends Fragment> fragmentClass;
+    public final String title;
+
+    Slides(String title, Class<? extends Fragment> fragmentClass) {
+      this.fragmentClass = fragmentClass;
+      this.title = title;
     }
   }
 }

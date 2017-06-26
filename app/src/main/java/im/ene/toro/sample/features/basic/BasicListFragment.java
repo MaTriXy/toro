@@ -30,6 +30,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import butterknife.BindView;
 import im.ene.toro.ToroPlayer;
+import im.ene.toro.sample.Playback;
 import im.ene.toro.sample.R;
 import im.ene.toro.sample.common.BaseFragment;
 import im.ene.toro.sample.common.ContentAdapter;
@@ -54,7 +55,7 @@ import static android.support.v7.widget.helper.ItemTouchHelper.UP;
  * @author eneim | 6/6/17.
  */
 
-public class BasicListFragment extends BaseFragment {
+public class BasicListFragment extends BaseFragment implements Playback {
 
   @SuppressWarnings("unused") public static BasicListFragment newInstance() {
     Bundle args = new Bundle();
@@ -139,6 +140,7 @@ public class BasicListFragment extends BaseFragment {
     };
 
     container.setPlayerSelector(selector);
+    playerSelector = selector;
 
     touchHelper = new ItemTouchHelper(new SimpleCallback(UP | DOWN | LEFT | RIGHT, 0) {
       @Override
@@ -180,5 +182,16 @@ public class BasicListFragment extends BaseFragment {
     adapter = null;
     layoutManager = null;
     super.onDestroyView();
+  }
+
+  // Playback interface
+  PlayerSelector playerSelector;  // cache
+
+  @Override public void trigger(boolean active) {
+    if (active) {
+      container.setPlayerSelector(playerSelector);
+    } else {
+      container.setPlayerSelector(PlayerSelector.NONE);
+    }
   }
 }

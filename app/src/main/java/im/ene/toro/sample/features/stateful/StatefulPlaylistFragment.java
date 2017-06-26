@@ -27,11 +27,13 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import butterknife.BindView;
+import im.ene.toro.sample.Playback;
 import im.ene.toro.sample.R;
 import im.ene.toro.sample.common.BaseFragment;
 import im.ene.toro.sample.common.ContentAdapter;
 import im.ene.toro.sample.common.EndlessScroller;
 import im.ene.toro.sample.data.DataSource;
+import im.ene.toro.widget.PlayerSelector;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.schedulers.Schedulers;
@@ -45,7 +47,7 @@ import static android.support.v7.widget.helper.ItemTouchHelper.UP;
  * @author eneim | 6/8/17.
  */
 
-public class StatefulPlaylistFragment extends BaseFragment {
+public class StatefulPlaylistFragment extends BaseFragment implements Playback {
 
   @SuppressWarnings("unused") public static StatefulPlaylistFragment newInstance() {
     Bundle args = new Bundle();
@@ -94,6 +96,7 @@ public class StatefulPlaylistFragment extends BaseFragment {
           }
         };
     container.addOnScrollListener(infiniteScrollListener);
+    playerSelector = container.getPlayerSelector();
 
     touchHelper = new ItemTouchHelper(new SimpleCallback(UP | DOWN | LEFT | RIGHT, 0) {
       @Override public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder,
@@ -134,5 +137,16 @@ public class StatefulPlaylistFragment extends BaseFragment {
     touchHelper = null;
     adapter = null;
     super.onDestroyView();
+  }
+
+  // Playback interface
+  PlayerSelector playerSelector;  // cache
+
+  @Override public void trigger(boolean active) {
+    if (active) {
+      container.setPlayerSelector(playerSelector);
+    } else {
+      container.setPlayerSelector(PlayerSelector.NONE);
+    }
   }
 }

@@ -29,10 +29,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import butterknife.BindView;
-import im.ene.toro.widget.PlayerSelector;
 import im.ene.toro.ToroPlayer;
 import im.ene.toro.media.PlaybackInfo;
 import im.ene.toro.sample.BuildConfig;
+import im.ene.toro.sample.Playback;
 import im.ene.toro.sample.R;
 import im.ene.toro.sample.common.BaseFragment;
 import im.ene.toro.sample.features.facebook.core.ScreenHelper;
@@ -41,6 +41,7 @@ import im.ene.toro.sample.features.facebook.data.FbVideo;
 import im.ene.toro.sample.features.facebook.player.BigPlayerFragment;
 import im.ene.toro.sample.features.facebook.playlist.MoreVideosFragment;
 import im.ene.toro.widget.Container;
+import im.ene.toro.widget.PlayerSelector;
 import java.util.List;
 
 /**
@@ -48,7 +49,7 @@ import java.util.List;
  */
 
 public class TimelineFragment extends BaseFragment
-    implements MoreVideosFragment.Callback, BigPlayerFragment.Callback {
+    implements MoreVideosFragment.Callback, BigPlayerFragment.Callback, Playback {
 
   private static final String STATE_KEY_FB_VIDEO = "fb:timeline:state:video";
   private static final String STATE_KEY_ACTIVE_ORDER = "fb:timeline:state:order";
@@ -216,5 +217,15 @@ public class TimelineFragment extends BaseFragment
   public void onBigPlayerDestroyed(int videoOrder, FbVideo baseItem, PlaybackInfo latestInfo) {
     adapter.savePlaybackInfo(videoOrder, latestInfo);
     container.setPlayerSelector(selector);
+  }
+
+  // Playback interface
+  @Override public void trigger(boolean active) {
+    // FIXME this may conflicts with the playlist behaviour.
+    if (active) {
+      container.setPlayerSelector(selector);
+    } else {
+      container.setPlayerSelector(PlayerSelector.NONE);
+    }
   }
 }

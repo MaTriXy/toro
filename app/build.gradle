@@ -64,6 +64,7 @@ android {
 dependencies {
   compile fileTree(include: ['*.jar'], dir: 'libs')
   compile project(':toro-core')
+  // compile "im.ene.toro3:toro:3.0.0-alpha1"
 
   androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
     exclude group: 'com.android.support', module: 'support-annotations'
