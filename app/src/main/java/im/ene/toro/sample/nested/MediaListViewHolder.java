@@ -16,109 +16,93 @@
 
 package im.ene.toro.sample.nested;
 
-import android.graphics.Point;
-import android.graphics.Rect;
-import android.os.Parcel;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.PagerSnapHelper;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SnapHelper;
-import android.util.Log;
 import android.util.SparseArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import im.ene.toro.CacheManager;
 import im.ene.toro.PlayerSelector;
-import im.ene.toro.PlayerStateManager;
 import im.ene.toro.ToroPlayer;
+import im.ene.toro.ToroUtil;
 import im.ene.toro.media.PlaybackInfo;
 import im.ene.toro.sample.R;
 import im.ene.toro.widget.Container;
-import io.reactivex.Observable;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
- * @author eneim (7/1/17).
+ * This {@link RecyclerView.ViewHolder} will contain a {@link Container}.
  *
- *         This {@link RecyclerView.ViewHolder} will contain a {@link Container}.
+ * @author eneim (7/1/17).
  */
 
-public class MediaListViewHolder extends BaseViewHolder implements ToroPlayer {
+@SuppressWarnings("unused") //
+class MediaListViewHolder extends BaseViewHolder implements ToroPlayer {
 
   private static final String TAG = "Toro:Nested";
 
   static final int LAYOUT_RES = R.layout.view_holder_nested_container;
 
-  @BindView(R.id.container) Container container;
+  @SuppressWarnings("WeakerAccess") @BindView(R.id.container) Container container;
   private final SnapHelper snapHelper = new PagerSnapHelper();
-  private int initPosition = 0;
+  private int initPosition = -1;
 
-  public MediaListViewHolder(View itemView) {
+  MediaListViewHolder(View itemView) {
     super(itemView);
     ButterKnife.bind(this, itemView);
   }
 
+  // Called by Adapter
   void bind(int position, Object item) {
     MediaList mediaList = (MediaList) item;
     Adapter adapter = new Adapter(mediaList);
     container.setAdapter(adapter);
-    container.setPlayerStateManager(new StateManager(mediaList));
-    snapHelper.attachToRecyclerView(container);
+    if (container.getCacheManager() == null) {
+      container.setCacheManager(new StateManager(mediaList));
+    }
   }
 
-  void detach() {
+  void onDetached() {
     snapHelper.attachToRecyclerView(null);
   }
 
+  void onAttached() {
+    snapHelper.attachToRecyclerView(container);
+  }
+
+  // ToroPlayer implementation
   @NonNull @Override public View getPlayerView() {
     return container;
   }
 
   @NonNull @Override public PlaybackInfo getCurrentPlaybackInfo() {
-    PlayerStateManager stateManager = container.getPlayerStateManager();
-    Collection<Integer> cached = stateManager != null ? stateManager.getSavedPlayerOrders() : null;
-    Log.i(TAG, "getCurrentPlaybackInfo: " + cached);
-    if (cached == null || cached.size() == 0) {
-      return new PlaybackInfo();
-    } else {
-      SparseArray<PlaybackInfo> infos = new SparseArray<>();
-      ExtraPlaybackInfo info = new ExtraPlaybackInfo(infos);
+    SparseArray<PlaybackInfo> actualInfos = container.getLatestPlaybackInfos();
+    ExtraPlaybackInfo resultInfo = new ExtraPlaybackInfo(actualInfos);
 
-      List<ToroPlayer> activePlayers = container.getActivePlayers();
-      Observable.fromIterable(activePlayers).doOnNext(player -> {
-        infos.put(player.getPlayerOrder(), player.getCurrentPlaybackInfo());
-        cached.remove(player.getPlayerOrder());
-      }).subscribe();
-
-      Observable.fromIterable(cached).doOnNext( //
-          integer -> infos.put(integer, stateManager.getPlaybackInfo(integer))  //
-      ).doOnComplete(() -> {
-        if (activePlayers.size() >= 1) {
-          info.setResumeWindow(activePlayers.get(0).getPlayerOrder());
-        }
-      }).subscribe();
-      return info;
+    List<ToroPlayer> activePlayers = container.filterBy(Container.Filter.PLAYING);
+    if (activePlayers.size() >= 1) {
+      resultInfo.setResumeWindow(activePlayers.get(0).getPlayerOrder());
     }
+
+    return resultInfo;
   }
 
   @Override
   public void initialize(@NonNull Container container, @Nullable PlaybackInfo playbackInfo) {
-    PlayerStateManager stateManager = this.container.getPlayerStateManager();
-    if (stateManager == null) return;
-
-    if (playbackInfo != null && playbackInfo instanceof ExtraPlaybackInfo) {
+    this.initPosition = -1;
+    if (playbackInfo instanceof ExtraPlaybackInfo) {
       //noinspection unchecked
       SparseArray<PlaybackInfo> cache = ((ExtraPlaybackInfo) playbackInfo).actualInfo;
-      if (cache != null) {
+      if (cache != null && cache.size() > 0) {
         for (int i = 0; i < cache.size(); i++) {
           int key = cache.keyAt(i);
-          stateManager.savePlaybackInfo(key, cache.get(key));
+          this.container.savePlaybackInfo(key, cache.get(key));
         }
       }
       this.initPosition = playbackInfo.getResumeWindow();
@@ -127,7 +111,8 @@ public class MediaListViewHolder extends BaseViewHolder implements ToroPlayer {
   }
 
   @Override public void play() {
-    this.container.scrollToPosition(initPosition);
+    if (initPosition >= 0) this.container.scrollToPosition(initPosition);
+    initPosition = -1;
     this.container.setPlayerSelector(PlayerSelector.DEFAULT);
   }
 
@@ -136,52 +121,70 @@ public class MediaListViewHolder extends BaseViewHolder implements ToroPlayer {
   }
 
   @Override public boolean isPlaying() {
-    return this.container.getActivePlayers().size() > 0;
+    return this.container.filterBy(Container.Filter.PLAYING).size() > 0;
   }
 
   @Override public void release() {
+    // release here
+    List<ToroPlayer> managed = this.container.filterBy(Container.Filter.MANAGING);
+    for (ToroPlayer player : managed) {
+      if (player.isPlaying()) {
+        this.container.savePlaybackInfo(player.getPlayerOrder(), player.getCurrentPlaybackInfo());
+        player.pause();
+      }
+      player.release();
+    }
     this.container.setPlayerSelector(PlayerSelector.NONE);
   }
 
   @Override public boolean wantsToPlay() {
-    Rect viewRect = new Rect();
-    boolean visible = this.container.getGlobalVisibleRect(viewRect, new Point());
-    if (!visible) return false;
-
-    Rect drawRect = new Rect();
-    container.getDrawingRect(drawRect);
-
-    int drawArea = drawRect.width() * drawRect.height();
-
-    float offset = 0.f;
-    if (drawArea > 0) {
-      int visibleArea = viewRect.height() * viewRect.width();
-      offset = visibleArea / (float) drawArea;
-    }
-
-    return offset >= 0.85;
+    return ToroUtil.visibleAreaOffset(this, itemView.getParent()) >= 0.85;
   }
 
   @Override public int getPlayerOrder() {
     return getAdapterPosition();
   }
 
-  static class Adapter extends RecyclerView.Adapter<NestedPlayerViewHolder> {
+  static class Adapter extends RecyclerView.Adapter<BaseViewHolder> {
 
+    static final int TYPE_VIDEO = 10;
+    static final int TYPE_TEXT = 20;
+
+    private LayoutInflater inflater;
     final MediaList mediaList;
 
     Adapter(MediaList mediaList) {
       this.mediaList = mediaList;
     }
 
-    @Override public NestedPlayerViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-      View view = LayoutInflater.from(parent.getContext())
-          .inflate(NestedPlayerViewHolder.LAYOUT_RES, parent, false);
-      return new NestedPlayerViewHolder(view);
+    @NonNull @Override
+    public BaseViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+      if (inflater == null || inflater.getContext() != parent.getContext()) {
+        inflater = LayoutInflater.from(parent.getContext());
+      }
+
+      final View view;
+      final BaseViewHolder viewHolder;
+      switch (viewType) {
+        case TYPE_VIDEO:
+          view = inflater.inflate(NestedPlayerViewHolder.LAYOUT_RES, parent, false);
+          viewHolder = new NestedPlayerViewHolder(view);
+          break;
+        default:
+          view = inflater.inflate(HorizontalTextViewHolder.LAYOUT_RES, parent, false);
+          viewHolder = new HorizontalTextViewHolder(view);
+          break;
+      }
+
+      return viewHolder;
     }
 
-    @Override public void onBindViewHolder(NestedPlayerViewHolder holder, int position) {
-      holder.bind(mediaList.get(position));
+    @Override public void onBindViewHolder(@NonNull BaseViewHolder holder, int position) {
+      holder.bind(position, mediaList.get(position));
+    }
+
+    @Override public int getItemViewType(int position) {
+      return position % 2 == 1 ? TYPE_TEXT : TYPE_VIDEO;
     }
 
     @Override public int getItemCount() {
@@ -189,7 +192,7 @@ public class MediaListViewHolder extends BaseViewHolder implements ToroPlayer {
     }
   }
 
-  static class StateManager implements PlayerStateManager {
+  static class StateManager implements CacheManager {
 
     final MediaList mediaList;
 
@@ -197,71 +200,12 @@ public class MediaListViewHolder extends BaseViewHolder implements ToroPlayer {
       this.mediaList = mediaList;
     }
 
-    private final Map<Integer, PlaybackInfo> stateCache = new TreeMap<>(Integer::compareTo);
-
-    @Override public void savePlaybackInfo(int order, @NonNull PlaybackInfo playbackInfo) {
-      if (order >= 0) stateCache.put(order, playbackInfo);
-      Log.w(TAG, "SAVE: " + order + " | " + stateCache);
+    @NonNull @Override public Object getKeyForOrder(int order) {
+      return this.mediaList.get(order);
     }
 
-    @NonNull @Override public PlaybackInfo getPlaybackInfo(int order) {
-      Integer item = order >= 0 ? order : null;
-      PlaybackInfo state = new PlaybackInfo();
-      if (item != null) {
-        state = stateCache.get(item);
-        if (state == null) {
-          state = new PlaybackInfo();
-          stateCache.put(item, state);
-        }
-      }
-      return state;
-    }
-
-    @Nullable @Override public Collection<Integer> getSavedPlayerOrders() {
-      return Observable.fromIterable(stateCache.keySet()).toList().blockingGet();
-    }
-  }
-
-  public static class ExtraPlaybackInfo extends PlaybackInfo {
-
-    final SparseArray actualInfo;
-
-    public ExtraPlaybackInfo(SparseArray<PlaybackInfo> actualInfo) {
-      this.actualInfo = actualInfo;
-    }
-
-    @Override public int describeContents() {
-      return 0;
-    }
-
-    @Override public void writeToParcel(Parcel dest, int flags) {
-      super.writeToParcel(dest, flags);
-      //noinspection unchecked
-      dest.writeSparseArray(this.actualInfo);
-    }
-
-    protected ExtraPlaybackInfo(Parcel in) {
-      super(in);
-      this.actualInfo = in.readSparseArray(PlaybackInfo.class.getClassLoader());
-    }
-
-    public static final Creator<ExtraPlaybackInfo> CREATOR =
-        new ClassLoaderCreator<ExtraPlaybackInfo>() {
-          @Override public ExtraPlaybackInfo createFromParcel(Parcel source) {
-            return new ExtraPlaybackInfo(source);
-          }
-
-          @Override public ExtraPlaybackInfo createFromParcel(Parcel source, ClassLoader loader) {
-            return new ExtraPlaybackInfo(source);
-          }
-
-          @Override public ExtraPlaybackInfo[] newArray(int size) {
-            return new ExtraPlaybackInfo[size];
-          }
-        };
-
-    @Override public String toString() {
-      return "ExtraPlaybackInfo{" + "actualInfo=" + actualInfo + '}';
+    @Nullable @Override public Integer getOrderForKey(@NonNull Object key) {
+      return key instanceof Content.Media ? this.mediaList.indexOf(key) : null;
     }
   }
 }

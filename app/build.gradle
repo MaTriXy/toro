@@ -16,19 +16,18 @@
 
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
-apply plugin: 'me.tatarka.retrolambda'
+apply plugin: 'kotlin-kapt'
 apply plugin: 'com.getkeepsafe.dexcount'
 
 android {
   compileSdkVersion rootProject.ext.androidVersion
-  buildToolsVersion rootProject.ext.buildToolVersion
 
   defaultConfig {
     applicationId "im.ene.toro.sample"
     minSdkVersion rootProject.ext.minSupportSDKVersion
     targetSdkVersion rootProject.ext.androidVersion
-    versionCode 1
-    versionName "1.0"
+    versionCode releaseVersionCode
+    versionName releaseVersion
     testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
     vectorDrawables.useSupportLibrary = true
@@ -62,58 +61,53 @@ android {
 }
 
 dependencies {
-  compile fileTree(include: ['*.jar'], dir: 'libs')
-  compile project(':toro-core')
+  implementation fileTree(include: ['*.jar'], dir: 'libs')
+  implementation project(':toro-core')
+  implementation project(':toro-exoplayer')
+  // implementation "im.ene.toro3:toro:3.5.0-SNAPSHOT"
+  // implementation "im.ene.toro3:toro-ext-exoplayer:3.5.0-SNAPSHOT"
 
-  androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
-    exclude group: 'com.android.support', module: 'support-annotations'
-  })
-  testCompile 'junit:junit:4.12'
+  testImplementation 'junit:junit:4.12'
+  androidTestImplementation 'com.android.support.test:runner:1.0.2'
+  androidTestImplementation 'com.android.support.test:rules:1.0.2'
+  androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+  androidTestImplementation 'com.android.support.test.espresso:espresso-contrib:3.0.2'
 
-  compile "com.android.support:design:${rootProject.ext.supportLibraryVersion}"
-  compile "com.android.support:appcompat-v7:${rootProject.ext.supportLibraryVersion}"
-  compile "com.android.support:cardview-v7:${rootProject.ext.supportLibraryVersion}"
-  compile "com.android.support:support-vector-drawable:${rootProject.ext.supportLibraryVersion}"
-  compile "com.android.support.constraint:constraint-layout:1.1.0-beta1"
+  implementation "com.android.support:design:${rootProject.ext.supportLibraryVersion}"
+  implementation "com.android.support:appcompat-v7:${rootProject.ext.supportLibraryVersion}"
+  implementation "com.android.support:cardview-v7:${rootProject.ext.supportLibraryVersion}"
+  implementation "com.android.support:support-vector-drawable:${rootProject.ext.supportLibraryVersion}"
+  implementation "com.android.support.constraint:constraint-layout:${rootProject.ext.constrainLayoutVersion}"
 
-  compile ('net.opacapp:multiline-collapsingtoolbar:1.4.0') {
+  implementation ('net.opacapp:multiline-collapsingtoolbar:1.6.0') {
     transitive = false
   }
 
   // additional dependencies.
-  compile "com.google.android.exoplayer:exoplayer-core:${rootProject.ext.exoPlayer2Version}"
-  compile ("com.google.android.exoplayer:exoplayer-ui:${rootProject.ext.exoPlayer2Version}") {
-    exclude group: 'com.android.support', module: 'support-annotations'
-  }
+  implementation "com.google.android.exoplayer:exoplayer:${rootProject.ext.exoPlayer2Version}"
 
-  compile "com.google.android.exoplayer:exoplayer-dash:${rootProject.ext.exoPlayer2Version}"
-  compile "com.google.android.exoplayer:exoplayer-hls:${rootProject.ext.exoPlayer2Version}"
-  compile "com.google.android.exoplayer:exoplayer-smoothstreaming:${rootProject.ext.exoPlayer2Version}"
-
-  compile 'com.jakewharton:butterknife:8.5.1'
-  annotationProcessor 'com.jakewharton:butterknife-compiler:8.5.1'
+  implementation 'com.jakewharton:butterknife:8.8.1'
+  kapt 'com.jakewharton:butterknife-compiler:8.8.1'
 
   // rxJava 2
-  compile("io.reactivex.rxjava2:rxandroid:2.0.1", {
+  implementation ("io.reactivex.rxjava2:rxandroid:2.0.2", {
     exclude group: 'io.reactivex.rxjava2', module: 'rxjava'
   })
-  compile 'io.reactivex.rxjava2:rxjava:2.1.1'
 
-  debugCompile 'com.squareup.leakcanary:leakcanary-android:1.5.1'
-  releaseCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5.1'
-  testCompile 'com.squareup.leakcanary:leakcanary-android-no-op:1.5.1'
+  implementation 'io.reactivex.rxjava2:rxjava:2.1.12'
 
-  compile 'com.github.bumptech.glide:glide:4.0.0-RC0'
-  annotationProcessor 'com.github.bumptech.glide:compiler:4.0.0-RC0'
+  // https://mvnrepository.com/artifact/org.jsoup/jsoup
+  implementation group: 'org.jsoup', name: 'jsoup', version: '1.11.2'
 
-  compile 'org.ocpsoft.prettytime:prettytime:4.0.1.Final'
-  compile 'com.jakewharton.threetenabp:threetenabp:1.0.5'
-  compile "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
+  debugImplementation 'com.squareup.leakcanary:leakcanary-android:1.5.4'
+  releaseImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:1.5.4'
+  testImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:1.5.4'
 
-  compile 'com.google.android:flexbox:0.3.0'
-  // compile 'com.android.support:multidex:1.0.1'
-}
+  implementation 'com.github.bumptech.glide:glide:4.6.1'
+  kapt 'com.github.bumptech.glide:compiler:4.6.1'
 
-repositories {
-  mavenCentral()
+  implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+
+  // Custom LayoutManager
+  // compile 'com.google.android:flexbox:0.3.0'
 }

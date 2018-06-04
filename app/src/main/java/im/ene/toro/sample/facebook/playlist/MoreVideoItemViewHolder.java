@@ -30,20 +30,19 @@ import android.widget.TextView;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import com.bumptech.glide.Glide;
-import com.google.android.exoplayer2.ui.SimpleExoPlayerView;
+import com.google.android.exoplayer2.ui.PlayerView;
 import im.ene.toro.ToroPlayer;
 import im.ene.toro.ToroUtil;
-import im.ene.toro.helper.ExoPlayerHelper;
-import im.ene.toro.helper.SimpleExoPlayerViewHelper;
+import im.ene.toro.exoplayer.ExoPlayerViewHelper;
+import im.ene.toro.exoplayer.Playable;
 import im.ene.toro.media.PlaybackInfo;
 import im.ene.toro.sample.R;
-import im.ene.toro.sample.ToroDemo;
 import im.ene.toro.sample.common.MediaUrl;
 import im.ene.toro.sample.facebook.data.FbVideo;
 import im.ene.toro.widget.Container;
 import java.util.List;
 
-import static im.ene.toro.sample.common.DemoUtil.getRelativeTimeString;
+import static android.text.format.DateUtils.getRelativeTimeSpanString;
 import static java.lang.String.format;
 import static java.util.Locale.getDefault;
 
@@ -56,23 +55,29 @@ public class MoreVideoItemViewHolder extends RecyclerView.ViewHolder implements 
 
   static final int LAYOUT_RES = R.layout.vh_fbcard_base_dark;
 
-  @Nullable SimpleExoPlayerViewHelper helper;
+  @Nullable ExoPlayerViewHelper helper;
   @Nullable private Uri mediaUri;
 
   @BindView(R.id.fb_user_icon) ImageView userIcon;
   @BindView(R.id.fb_user_name) TextView userName;
   @BindView(R.id.fb_user_profile) TextView userProfile;
   @BindView(R.id.fb_item_middle) FrameLayout container;
-  @BindView(R.id.fb_video_player) SimpleExoPlayerView playerView;
+  @BindView(R.id.fb_video_player) PlayerView playerView;
   @BindView(R.id.player_state) TextView state;
   @BindView(R.id.over_lay) View overLay;
 
-  private ExoPlayerHelper.EventListener listener = new ExoPlayerHelper.EventListener() {
+  private Playable.EventListener listener = new Playable.DefaultEventListener() {
     @Override public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
       super.onPlayerStateChanged(playWhenReady, playbackState);
       state.setText(format(getDefault(), "STATE: %d・PWR: %s", playbackState, playWhenReady));
     }
   };
+
+  private EventListener eventListener;
+
+  public void setEventListener(EventListener eventListener) {
+    this.eventListener = eventListener;
+  }
 
   MoreVideoItemViewHolder(View itemView) {
     super(itemView);
@@ -85,10 +90,10 @@ public class MoreVideoItemViewHolder extends RecyclerView.ViewHolder implements 
   void bind(MoreVideosAdapter adapter, FbVideo item, List<Object> payloads) {
     if (item != null) {
       userName.setText(item.author.userName);
-      Glide.with(ToroDemo.getApp()).load(item.author.userIcon).into(userIcon);
+      Glide.with(itemView.getContext()).load(item.author.userIcon).into(userIcon);
       MediaUrl url = item.getMediaUrl();
       mediaUri = url.getUri();
-      userProfile.setText(format("%s・%s", getRelativeTimeString(item.timeStamp), url.name()));
+      userProfile.setText(format("%s・%s", getRelativeTimeSpanString(item.timeStamp), url.name()));
     }
   }
 
@@ -101,12 +106,14 @@ public class MoreVideoItemViewHolder extends RecyclerView.ViewHolder implements 
   }
 
   @Override
-  public void initialize(@NonNull Container container, @Nullable PlaybackInfo playbackInfo) {
+  public void initialize(@NonNull Container container, @NonNull PlaybackInfo playbackInfo) {
+    if (mediaUri == null) throw new IllegalStateException("mediaUri is null.");
     if (helper == null) {
-      helper = new SimpleExoPlayerViewHelper(container, this, mediaUri);
-      helper.setEventListener(listener);
+      helper = new ExoPlayerViewHelper(this, mediaUri);
+      helper.addEventListener(listener);
+      helper.addPlayerEventListener(eventListener);
     }
-    helper.initialize(playbackInfo);
+    helper.initialize(container, playbackInfo);
   }
 
   ViewPropertyAnimator onPlayAnimator;
@@ -148,7 +155,8 @@ public class MoreVideoItemViewHolder extends RecyclerView.ViewHolder implements 
     onPauseAnimator = null;
 
     if (helper != null) {
-      helper.setEventListener(null);
+      helper.removeEventListener(listener);
+      helper.removePlayerEventListener(eventListener);
       helper.release();
       helper = null;
     }

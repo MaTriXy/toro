@@ -78,17 +78,16 @@ public class TimelineFragment extends BaseFragment
     super.onAttach(context);
     // !IMPORTANT: don't remove these lines.
     this.TAG = "Toro:Fb:TimelineFragment";
-    Log.wtf(TAG, "onAttach() called with: context = [" + context + "]");
     windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
   }
 
   @Nullable @Override
-  public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container,
+  public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
       @Nullable Bundle bundle) {
     return inflater.inflate(R.layout.fragment_facebook_timeline, container, false);
   }
 
-  @Override public void onViewCreated(View view, @Nullable Bundle bundle) {
+  @Override public void onViewCreated(@NonNull View view, @Nullable Bundle bundle) {
     super.onViewCreated(view, bundle);
     toolbarLayout.setTitle(getString(R.string.title_timeline));
 
@@ -96,7 +95,7 @@ public class TimelineFragment extends BaseFragment
     layoutManager = new LinearLayoutManager(getContext());
     container.setAdapter(adapter);
     container.setLayoutManager(layoutManager);
-    container.setPlayerStateManager(adapter);
+    container.setCacheManager(adapter);
     adapterCallback = new TimelineAdapter.Callback() {
       @Override void onItemClick(@NonNull TimelineViewHolder viewHolder, @NonNull View view,
           @NonNull FbItem item, int position) {
@@ -126,24 +125,26 @@ public class TimelineFragment extends BaseFragment
   @Override public void onViewStateRestored(@Nullable Bundle bundle) {
     super.onViewStateRestored(bundle);
     if (bundle == null) {
-      // User come here from first place, we keep current behaviour.
+      // User come here from empty, we keep current behaviour.
       return;
     }
-    // Bundle != null, which is a hint that we come here from a orientation change.
+    // Bundle != null, which is a hint that we come here from a config change.
+    //
     // There is a chance that this Fragment is recreated after a config change. In that case,
     // if in previous 'life', there was a BigPlayerFragment created, it will store a bundle
     // containing its latest playback state that was provided by this Fragment.
-    // Here we restore it to continue the playback.
+    // Here we restore it to continue the last playback.
     Bundle playerBundle = bundle.getBundle(STATE_KEY_BIG_PLAYER_BUNDLE);
     if (playerBundle != null) {
       int order = playerBundle.getInt(BigPlayerFragment.BUNDLE_KEY_ORDER);
       PlaybackInfo info = playerBundle.getParcelable(BigPlayerFragment.BUNDLE_KEY_INFO);
       if (info == null) info = new PlaybackInfo();
-      this.adapter.savePlaybackInfo(order, info);
+      this.container.savePlaybackInfo(order, info);
     }
+
     if (ScreenHelper.shouldUseBigPlayer(windowManager.getDefaultDisplay())) {
-      // Since we come here from a orientation change, if previous state (portrait mode),
-      // there was a on-playing Player, we should have a saved state of latest playback.
+      // Since we come here from a config change, if previous state (portrait mode),
+      // there was a on-playing Big Player, we should have a saved state of its playback.
       // Let's retrieve it and then do stuff.
 
       // 1. Obtain the Video object and its order.
@@ -163,18 +164,18 @@ public class TimelineFragment extends BaseFragment
   }
 
   // Memo: This method is called before children Fragments' onSaveInstanceState.
-  @Override public void onSaveInstanceState(Bundle outState) {
+  @Override public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     // If there is DialogFragment showing, we save stuff from it here.
     Fragment playerFragment =
         getChildFragmentManager().findFragmentByTag(BigPlayerFragment.FRAGMENT_TAG);
-    if (playerFragment != null && playerFragment instanceof BigPlayerFragment) {
+    if (playerFragment instanceof BigPlayerFragment) {
       Bundle playerBundle = ((BigPlayerFragment) playerFragment).getCurrentState();
       outState.putBundle(STATE_KEY_BIG_PLAYER_BUNDLE, playerBundle);
     }
 
     // Save stuff here.
-    List<ToroPlayer> activePlayers = container.getActivePlayers();
+    List<ToroPlayer> activePlayers = container.filterBy(Container.Filter.PLAYING);
     if (activePlayers.isEmpty()) return;
     ToroPlayer firstPlayer = activePlayers.get(0);  // get the first one only.
     // We will store the Media object, playback state.
@@ -185,10 +186,10 @@ public class TimelineFragment extends BaseFragment
       }
     }
 
-    // Save this and restore again to open on a BigPlayer if need.
+    // Save this and restore later to open on a BigPlayer if need.
     if (item instanceof FbVideo) {
       outState.putInt(STATE_KEY_ACTIVE_ORDER, firstPlayer.getPlayerOrder());
-      outState.putParcelable(STATE_KEY_FB_VIDEO, (FbVideo) item);
+      outState.putParcelable(STATE_KEY_FB_VIDEO, item);
       outState.putParcelable(STATE_KEY_PLAYBACK_STATE, firstPlayer.getCurrentPlaybackInfo());
     } else {
       // Real practice should not face the following issue, only for debugging.
@@ -217,7 +218,7 @@ public class TimelineFragment extends BaseFragment
 
   @Override
   public void onPlaylistDestroyed(int basePosition, FbVideo baseItem, PlaybackInfo latestInfo) {
-    adapter.savePlaybackInfo(basePosition, latestInfo);
+    container.savePlaybackInfo(basePosition, latestInfo);
     container.setPlayerSelector(selector);
   }
 
@@ -229,7 +230,7 @@ public class TimelineFragment extends BaseFragment
 
   @Override
   public void onBigPlayerDestroyed(int videoOrder, FbVideo baseItem, PlaybackInfo latestInfo) {
-    adapter.savePlaybackInfo(videoOrder, latestInfo);
+    container.savePlaybackInfo(videoOrder, latestInfo);
     container.setPlayerSelector(selector);
   }
 

@@ -20,6 +20,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.CallSuper;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -38,11 +39,17 @@ public class BaseFragment extends Fragment {
 
   private static final boolean D = BuildConfig.DEBUG;
 
-  protected String TAG = "Toro:BaseFragment";
+  // Save viewPagerMode flag on config change
+  private static final String STATE_VIEW_PAGER_MODE = "toro:fragment:state:view_pager_mode";
+
+  protected String TAG = "Toro:" + getClass().getSimpleName();
+
+  public static final String RESULT_EXTRA_PLAYER_ORDER = "toro:demo:player:result:order";
+  public static final String RESULT_EXTRA_PLAYBACK_INFO = "toro:demo:player:result:playback";
 
   /**
    * The following flag is used for {@link Fragment} that is inside a ViewPager.
-   * Default is {@code false}.
+   * Default is {@code false} for non-ViewPager use.
    */
   protected boolean viewPagerMode = false;
 
@@ -57,12 +64,11 @@ public class BaseFragment extends Fragment {
 
   @Override public void onAttach(Context context) {
     super.onAttach(context);
-    TAG = "Toro:" + getClass().getSimpleName();
     if (D) Log.wtf(TAG, "onAttach() called with: context = [" + context + "]");
   }
 
   @Nullable @Override
-  public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container,
+  public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
       @Nullable Bundle bundle) {
     if (D) {
       Log.wtf(TAG, "onCreateView() called with: inflater = ["
@@ -78,12 +84,15 @@ public class BaseFragment extends Fragment {
 
   private Unbinder unbinder;
 
-  @CallSuper @Override public void onViewCreated(View view, @Nullable Bundle bundle) {
+  @CallSuper @Override public void onViewCreated(@NonNull View view, @Nullable Bundle bundle) {
     super.onViewCreated(view, bundle);
     if (D) {
       Log.wtf(TAG, "onViewCreated() called with: view = [" + view + "], bundle = [" + bundle + "]");
     }
     unbinder = ButterKnife.bind(this, view);
+    if (bundle != null && bundle.containsKey(STATE_VIEW_PAGER_MODE)) {
+      this.viewPagerMode = bundle.getBoolean(STATE_VIEW_PAGER_MODE);
+    }
   }
 
   @Override public void onActivityCreated(@Nullable Bundle bundle) {
@@ -96,9 +105,10 @@ public class BaseFragment extends Fragment {
     if (D) Log.wtf(TAG, "onViewStateRestored() called with: bundle = [" + bundle + "]");
   }
 
-  @Override public void onSaveInstanceState(Bundle outState) {
+  @Override public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     if (D) Log.wtf(TAG, "onSaveInstanceState() called with: outState = [" + outState + "]");
+    outState.putBoolean(STATE_VIEW_PAGER_MODE, this.viewPagerMode);
   }
 
   @Override public void onStart() {
@@ -171,5 +181,12 @@ public class BaseFragment extends Fragment {
   @Override public void onAttachFragment(Fragment childFragment) {
     super.onAttachFragment(childFragment);
     if (D) Log.wtf(TAG, "onAttachFragment() called with: childFragment = [" + childFragment + "]");
+  }
+
+  @Override public void setUserVisibleHint(boolean isVisibleToUser) {
+    super.setUserVisibleHint(isVisibleToUser);
+    if (D) {
+      Log.d(TAG, "setUserVisibleHint() called with: isVisibleToUser = [" + isVisibleToUser + "]");
+    }
   }
 }

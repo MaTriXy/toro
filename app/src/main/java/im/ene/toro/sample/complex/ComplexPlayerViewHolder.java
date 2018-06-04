@@ -24,13 +24,12 @@ import android.view.View;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
-import com.google.android.exoplayer2.ui.SimpleExoPlayerView;
+import com.google.android.exoplayer2.ui.PlayerView;
 import im.ene.toro.ToroPlayer;
 import im.ene.toro.ToroUtil;
-import im.ene.toro.helper.SimpleExoPlayerViewHelper;
+import im.ene.toro.exoplayer.ExoPlayerViewHelper;
 import im.ene.toro.media.PlaybackInfo;
 import im.ene.toro.sample.R;
-import im.ene.toro.sample.basic.VideoData;
 import im.ene.toro.widget.Container;
 
 /**
@@ -44,10 +43,10 @@ public class ComplexPlayerViewHolder extends RecyclerView.ViewHolder implements 
 
   static final int LAYOUT_RES = R.layout.view_holder_exoplayer_complex;
 
-  SimpleExoPlayerViewHelper helper;
+  ExoPlayerViewHelper helper;
   Uri mediaUri;
 
-  @BindView(R.id.player) SimpleExoPlayerView playerView;
+  @BindView(R.id.player) PlayerView playerView;
 
   public ComplexPlayerViewHolder(View itemView) {
     super(itemView);
@@ -63,11 +62,11 @@ public class ComplexPlayerViewHolder extends RecyclerView.ViewHolder implements 
   }
 
   @Override
-  public void initialize(@NonNull Container container, @Nullable PlaybackInfo playbackInfo) {
+  public void initialize(@NonNull Container container, @NonNull PlaybackInfo playbackInfo) {
     if (helper == null) {
-      helper = new SimpleExoPlayerViewHelper(container, this, mediaUri);
+      helper = new ExoPlayerViewHelper(this, mediaUri);
     }
-    helper.initialize(playbackInfo);
+    helper.initialize(container, playbackInfo);
   }
 
   @Override public void play() {
@@ -101,13 +100,13 @@ public class ComplexPlayerViewHolder extends RecyclerView.ViewHolder implements 
     return "ExoPlayer{" + hashCode() + " " + getAdapterPosition() + "}";
   }
 
-  void bind(VideoData videoData, int position) {
+  void bind(Content.Media media, int position) {
     if (position % 3 == 0) {
       playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH);
     } else {
       playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT);
     }
 
-    this.mediaUri = videoData.getMediaUri();
+    this.mediaUri = media.mediaUri;
   }
 }

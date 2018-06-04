@@ -16,8 +16,11 @@
 
 package im.ene.toro.sample.common;
 
-import im.ene.toro.sample.ToroDemo;
-import java.util.Date;
+import android.content.Context;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 /**
  * @author eneim | 6/8/17.
@@ -33,7 +36,18 @@ public class DemoUtil {
     return (x < y) ? -1 : ((x == y) ? 0 : 1);
   }
 
-  public static String getRelativeTimeString(long time) {
-    return ToroDemo.getApp().getPrettyTime().format(new Date(time));
+  public static String getFileContent(Context context, String fileName) {
+    StringBuilder total = new StringBuilder();
+    try (InputStream inputStream = context.getAssets().open(fileName);
+         BufferedReader r = new BufferedReader(new InputStreamReader(inputStream))) {
+      String line;
+      while ((line = r.readLine()) != null) {
+        total.append(line).append('\n');
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    return total.toString();
   }
 }

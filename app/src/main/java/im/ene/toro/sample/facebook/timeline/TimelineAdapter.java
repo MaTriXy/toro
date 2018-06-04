@@ -21,17 +21,11 @@ import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
-import im.ene.toro.PlayerStateManager;
-import im.ene.toro.media.PlaybackInfo;
-import im.ene.toro.sample.common.DemoUtil;
-import im.ene.toro.sample.facebook.data.FbVideo;
+import im.ene.toro.CacheManager;
 import im.ene.toro.sample.facebook.data.FbItem;
-import io.reactivex.Observable;
+import im.ene.toro.sample.facebook.data.FbVideo;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * @author eneim | 6/18/17.
@@ -39,7 +33,7 @@ import java.util.TreeMap;
 
 @SuppressWarnings({ "unused", "WeakerAccess" }) //
 public class TimelineAdapter extends RecyclerView.Adapter<TimelineViewHolder>
-    implements PlayerStateManager {
+    implements CacheManager {
 
   private static final String TAG = "Toro:Fb:Adapter";
 
@@ -65,7 +59,8 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineViewHolder>
     return position;
   }
 
-  @Override public TimelineViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+  @NonNull @Override
+  public TimelineViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
     final TimelineViewHolder viewHolder = TimelineViewHolder.createViewHolder(parent, viewType);
     viewHolder.setClickListener(v -> {
       int pos = viewHolder.getAdapterPosition();
@@ -81,11 +76,11 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineViewHolder>
     return item instanceof FbVideo ? TYPE_VIDEO : TYPE_OTHER;
   }
 
-  @Override public void onBindViewHolder(TimelineViewHolder holder, int position) {
+  @Override public void onBindViewHolder(@NonNull TimelineViewHolder holder, int position) {
     holder.bind(this, getItem(position), null);
   }
 
-  @Override public void onViewRecycled(TimelineViewHolder holder) {
+  @Override public void onViewRecycled(@NonNull TimelineViewHolder holder) {
     holder.onRecycled();
   }
 
@@ -109,30 +104,13 @@ public class TimelineAdapter extends RecyclerView.Adapter<TimelineViewHolder>
         @NonNull FbItem item, int position);
   }
 
-  // Implement the PlayerStateManager;
+  // Implement the CacheManager;
 
-  private final Map<FbItem, PlaybackInfo> stateCache =
-      new TreeMap<>((o1, o2) -> DemoUtil.compare(o1.getIndex(), o2.getIndex()));
-
-  @Override public void savePlaybackInfo(int order, @NonNull PlaybackInfo playbackInfo) {
-    if (order >= 0) stateCache.put(getItem(order), playbackInfo);
+  @NonNull @Override public Object getKeyForOrder(int order) {
+    return getItem(order);
   }
 
-  @NonNull @Override public PlaybackInfo getPlaybackInfo(int order) {
-    FbItem entity = order >= 0 ? getItem(order) : null;
-    PlaybackInfo state = new PlaybackInfo();
-    if (entity != null) {
-      state = stateCache.get(entity);
-      if (state == null) {
-        state = new PlaybackInfo();
-        stateCache.put(entity, state);
-      }
-    }
-    return state;
-  }
-
-  // TODO return null if client doesn't want to save playback states on config change.
-  @Nullable @Override public Collection<Integer> getSavedPlayerOrders() {
-    return Observable.fromIterable(stateCache.keySet()).map(items::indexOf).toList().blockingGet();
+  @Nullable @Override public Integer getOrderForKey(@NonNull Object key) {
+    return key instanceof FbItem ? items.indexOf(key) : null;
   }
 }

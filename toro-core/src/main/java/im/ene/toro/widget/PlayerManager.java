@@ -16,37 +16,40 @@
 
 package im.ene.toro.widget;
 
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.view.View;
+import android.support.v4.util.ArraySet;
+import im.ene.toro.PlayerDispatcher;
 import im.ene.toro.ToroPlayer;
-import im.ene.toro.media.PlaybackInfo;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
+ * Manage the collection of {@link ToroPlayer}s for a specific {@link Container}.
+ *
+ * Task: collect all Players in which "{@link Common#allowsToPlay(ToroPlayer)}" returns true, then
+ * initialize them.
+ *
  * @author eneim | 5/31/17.
- *
- *         Manage the collection of {@link ToroPlayer}s for a specific {@link Container}.
- *
- *         Task: collect all Players in which "{@link Common#allowsToPlay(View, Container)}"
- *         returns true, then initialize them.
  */
+@SuppressWarnings({ "unused", "UnusedReturnValue", "StatementWithEmptyBody" }) //
+final class PlayerManager implements Handler.Callback {
 
-@SuppressWarnings({ "unused", "UnusedReturnValue" }) //
-final class PlayerManager {
-
-  private static String TAG = "ToroLib:PlayerManager";
+  private static final String TAG = "ToroLib:Manager";
+  private Handler handler;
 
   // Make sure each ToroPlayer will present only once in this Manager.
-  private final HashSet<ToroPlayer> players = new HashSet<>();
+  private final Set<ToroPlayer> players = new ArraySet<>();
 
   boolean attachPlayer(@NonNull ToroPlayer player) {
     return players.add(player);
   }
 
   boolean detachPlayer(@NonNull ToroPlayer player) {
+    handler.removeCallbacksAndMessages(player);
     return players.remove(player);
   }
 
@@ -55,7 +58,7 @@ final class PlayerManager {
   }
 
   /**
-   * Return a Copy of the collection of players this manager is managing.
+   * Return a "Copy" of the collection of players this manager is managing.
    *
    * @return a non null collection of Players those a managed.
    */
@@ -63,24 +66,73 @@ final class PlayerManager {
     return new ArrayList<>(this.players);
   }
 
-  void initialize(@NonNull ToroPlayer player, @NonNull Container container,
-      @Nullable PlaybackInfo playbackInfo) {
-    player.initialize(container, playbackInfo);
+  void initialize(@NonNull ToroPlayer player, Container container) {
+    player.initialize(container, container.getPlaybackInfo(player.getPlayerOrder()));
   }
 
-  void play(@NonNull ToroPlayer player) {
-    player.play();
+  void play(@NonNull ToroPlayer player, int delay) {
+    if (delay < PlayerDispatcher.DELAY_INFINITE) throw new IllegalArgumentException("Too negative");
+    if (handler == null) return;
+    handler.removeMessages(MSG_PLAY, player); // remove undone msg for this player
+    if (delay == PlayerDispatcher.DELAY_INFINITE) {
+      // do nothing
+    } else if (delay == PlayerDispatcher.DELAY_NONE) {
+      player.play();
+    } else {
+      handler.sendMessageDelayed(handler.obtainMessage(MSG_PLAY, player), delay);
+    }
   }
 
   void pause(@NonNull ToroPlayer player) {
+    handler.removeCallbacksAndMessages(player); // remove all msg sent for the player
     player.pause();
   }
 
-  void release(@NonNull ToroPlayer player) {
-    player.release();
+  // return false if this manager could not release the player.
+  // normally when this manager doesn't manage the player.
+  boolean release(@NonNull ToroPlayer player) {
+    if (handler != null) handler.removeCallbacksAndMessages(null);
+    if (manages(player)) {
+      player.release();
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  void recycle(ToroPlayer player) {
+    // no-ops, place holder only.
+    if (handler != null) handler.removeCallbacksAndMessages(player);
   }
 
   void clear() {
+    if (handler != null) handler.removeCallbacksAndMessages(null);
     this.players.clear();
+  }
+
+  void deferPlaybacks() {
+    if (handler != null) handler.removeMessages(MSG_PLAY);
+  }
+
+  void onAttach() {
+    // do nothing
+    if (handler == null) handler = new Handler(Looper.getMainLooper(), this);
+  }
+
+  void onDetach() {
+    if (handler != null) {
+      handler.removeCallbacksAndMessages(null);
+      handler = null;
+    }
+  }
+
+  @SuppressWarnings("WeakerAccess") static final int MSG_PLAY = 100;
+
+  @Override public boolean handleMessage(Message msg) {
+    if (msg.what == MSG_PLAY && msg.obj instanceof ToroPlayer) {
+      ToroPlayer player = (ToroPlayer) msg.obj;
+      player.play();
+    }
+    return true;
   }
 }

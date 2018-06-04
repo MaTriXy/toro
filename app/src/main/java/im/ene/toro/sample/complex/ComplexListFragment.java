@@ -27,6 +27,7 @@ import android.view.ViewGroup;
 import butterknife.BindView;
 import im.ene.toro.PlayerSelector;
 import im.ene.toro.ToroPlayer;
+import im.ene.toro.annotations.Sorted;
 import im.ene.toro.sample.R;
 import im.ene.toro.sample.common.BaseFragment;
 import im.ene.toro.widget.Container;
@@ -50,7 +51,7 @@ public class ComplexListFragment extends BaseFragment {
   }
 
   @Nullable @Override
-  public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container,
+  public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
       @Nullable Bundle bundle) {
     return inflater.inflate(R.layout.fragment_complex, container, false);
   }
@@ -60,7 +61,7 @@ public class ComplexListFragment extends BaseFragment {
   GridLayoutManager layoutManager;
   ComplexListAdapter adapter;
 
-  @Override public void onViewCreated(View view, @Nullable Bundle bundle) {
+  @Override public void onViewCreated(@NonNull View view, @Nullable Bundle bundle) {
     super.onViewCreated(view, bundle);
     toolbarLayout.setTitle(getString(R.string.title_complex_grid));
 
@@ -77,7 +78,7 @@ public class ComplexListFragment extends BaseFragment {
     // Custom player selector for a complicated playback in grid
     activeSelector = new PlayerSelector() {
       @NonNull @Override public Collection<ToroPlayer> select(@NonNull Container container,
-          @NonNull List<ToroPlayer> items) {
+          @Sorted(order = Sorted.Order.ASCENDING) @NonNull List<ToroPlayer> items) {
         List<ToroPlayer> toSelect;
         int count = items.size();
         if (count < 1) {
@@ -100,6 +101,9 @@ public class ComplexListFragment extends BaseFragment {
       }
     };
 
+    // A demo of using PlayerDispatcher flexible, may not be practical.
+    container.setPlayerDispatcher(player -> player.getPlayerOrder() % 2 == 1 ? 0 : 1500);
+
     if (viewPagerMode) {
       if (getUserVisibleHint()) {
         selector = activeSelector;
@@ -111,7 +115,7 @@ public class ComplexListFragment extends BaseFragment {
       // which will cause our setup doesn't work well. We need a delay to make things work.
       handler.postDelayed(() -> {
         if (container != null) container.setPlayerSelector(selector);
-      }, 200);
+      }, 500);
     } else {
       container.setPlayerSelector(activeSelector);
     }
@@ -143,6 +147,6 @@ public class ComplexListFragment extends BaseFragment {
     // which will cause our setup doesn't work well. We need a delay to make things work.
     handler.postDelayed(() -> {
       if (container != null) container.setPlayerSelector(selector);
-    }, 200);
+    }, 500);
   }
 }

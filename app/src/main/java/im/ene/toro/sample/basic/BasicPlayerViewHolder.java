@@ -18,15 +18,15 @@ package im.ene.toro.sample.basic;
 
 import android.net.Uri;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import com.google.android.exoplayer2.ui.SimpleExoPlayerView;
+import com.google.android.exoplayer2.ui.PlayerView;
 import im.ene.toro.ToroPlayer;
 import im.ene.toro.ToroUtil;
-import im.ene.toro.helper.SimpleExoPlayerViewHelper;
+import im.ene.toro.exoplayer.ExoPlayerViewHelper;
+import im.ene.toro.helper.ToroPlayerHelper;
 import im.ene.toro.media.PlaybackInfo;
 import im.ene.toro.sample.R;
 import im.ene.toro.widget.Container;
@@ -35,17 +35,17 @@ import im.ene.toro.widget.Container;
  * @author eneim (7/1/17).
  */
 
-@SuppressWarnings("WeakerAccess") //
-public class BasicPlayerViewHolder extends RecyclerView.ViewHolder implements ToroPlayer {
+@SuppressWarnings({ "WeakerAccess", "unused" }) //
+class BasicPlayerViewHolder extends RecyclerView.ViewHolder implements ToroPlayer {
 
-  private static final String TAG = "Toro:Holder:ExoPlayer";
+  private static final String TAG = "Toro:Basic:Holder";
 
   static final int LAYOUT_RES = R.layout.view_holder_exoplayer_basic;
 
-  SimpleExoPlayerViewHelper helper;
+  ToroPlayerHelper helper;
   Uri mediaUri;
 
-  @BindView(R.id.player) SimpleExoPlayerView playerView;
+  @BindView(R.id.player) PlayerView playerView;
 
   public BasicPlayerViewHolder(View itemView) {
     super(itemView);
@@ -61,11 +61,11 @@ public class BasicPlayerViewHolder extends RecyclerView.ViewHolder implements To
   }
 
   @Override
-  public void initialize(@NonNull Container container, @Nullable PlaybackInfo playbackInfo) {
+  public void initialize(@NonNull Container container, @NonNull PlaybackInfo playbackInfo) {
     if (helper == null) {
-      helper = new SimpleExoPlayerViewHelper(container, this, mediaUri);
+      helper = new ExoPlayerViewHelper(this, mediaUri);
     }
-    helper.initialize(playbackInfo);
+    helper.initialize(container, playbackInfo);
   }
 
   @Override public void play() {
@@ -99,7 +99,7 @@ public class BasicPlayerViewHolder extends RecyclerView.ViewHolder implements To
     return "ExoPlayer{" + hashCode() + " " + getAdapterPosition() + "}";
   }
 
-  void bind(VideoData videoData) {
-    this.mediaUri = videoData.getMediaUri();
+  void bind(Content.Media media) {
+    this.mediaUri = media.mediaUri;
   }
 }
