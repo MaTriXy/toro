@@ -17,10 +17,8 @@
 package im.ene.toro.sample;
 
 import android.app.Application;
-import android.content.res.Configuration;
-import com.jakewharton.threetenabp.AndroidThreeTen;
 import com.squareup.leakcanary.LeakCanary;
-import org.ocpsoft.prettytime.PrettyTime;
+import im.ene.toro.exoplayer.ToroExo;
 
 /**
  * @author eneim | 6/5/17.
@@ -33,8 +31,6 @@ public class ToroDemo extends Application {
   @Override public void onCreate() {
     super.onCreate();
     singleton = this;
-    AndroidThreeTen.init(this);
-    prettyTime = new PrettyTime();
     if (LeakCanary.isInAnalyzerProcess(this)) {
       // This process is dedicated to LeakCanary for heap analysis.
       // You should not init your app in this process.
@@ -43,20 +39,12 @@ public class ToroDemo extends Application {
     LeakCanary.install(this);
   }
 
-  @Override public void onConfigurationChanged(Configuration newConfig) {
-    super.onConfigurationChanged(newConfig);
-    // locale changes and so on.
-    AndroidThreeTen.init(this);
-    prettyTime = new PrettyTime();
-  }
-
   public static ToroDemo getApp() {
     return singleton;
   }
 
-  PrettyTime prettyTime;
-
-  public PrettyTime getPrettyTime() {
-    return prettyTime;
+  @Override public void onTrimMemory(int level) {
+    super.onTrimMemory(level);
+    if (level >= TRIM_MEMORY_BACKGROUND) ToroExo.with(this).cleanUp();
   }
 }

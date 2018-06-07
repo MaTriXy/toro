@@ -26,16 +26,19 @@ import im.ene.toro.ToroPlayer;
 import im.ene.toro.ToroPlayer.State;
 import im.ene.toro.helper.ToroPlayerHelper;
 import im.ene.toro.media.PlaybackInfo;
-import im.ene.toro.widget.Container;
+import im.ene.toro.media.VolumeInfo;
+import java.util.HashSet;
+import java.util.Set;
 
 import static android.media.MediaPlayer.MEDIA_INFO_BUFFERING_END;
 import static android.media.MediaPlayer.MEDIA_INFO_BUFFERING_START;
+import static im.ene.toro.ToroUtil.checkNotNull;
 
 /**
  * @author eneim | 6/11/17.
  *
- *         Helper class for {@link ToroVideoView}. This class makes the playback using {@link
- *         ToroVideoView} easier by wrapping all necessary components and functionality.
+ * Helper class for {@link ToroVideoView}. This class makes the playback using {@link
+ * ToroVideoView} easier by wrapping all necessary components and functionality.
  */
 
 @SuppressWarnings({ "WeakerAccess", "ConstantConditions", "unused" }) //
@@ -53,9 +56,10 @@ public class LegacyVideoViewHelper extends ToroPlayerHelper {
 
   @State int playerState = State.STATE_IDLE;
   boolean playWhenReady = false;  // mimic the ExoPlayer
+  final VolumeInfo volumeInfo = new VolumeInfo(false, 1f);
 
-  public LegacyVideoViewHelper(Container container, ToroPlayer player, @NonNull Uri mediaUri) {
-    super(container, player);
+  public LegacyVideoViewHelper(ToroPlayer player, @NonNull Uri mediaUri) {
+    super(player);
     if (!(player.getPlayerView() instanceof ToroVideoView)) {
       throw new IllegalArgumentException("Only support ToroVideoView.");
     }
@@ -74,19 +78,18 @@ public class LegacyVideoViewHelper extends ToroPlayerHelper {
     this.onPreparedListener = onPreparedListener;
   }
 
-  @Override public void initialize(@Nullable final PlaybackInfo playbackInfo) {
-    if (playbackInfo != null) {
-      this.playbackInfo.setResumePosition(playbackInfo.getResumePosition());
-    }
+  @Override protected void initialize(@NonNull final PlaybackInfo playbackInfo) {
+    this.playbackInfo.setResumePosition(playbackInfo.getResumePosition());
 
+    final LegacyVideoViewHelper helper = LegacyVideoViewHelper.this;
     // On Complete event, we reset the player, re-prepare the VideoView so that it can be re-used.
     this.playerView.setOnCompletionListener(mp -> {
       playerState = State.STATE_END;
       onPlayerStateUpdated(playWhenReady, playerState);
-      if (LegacyVideoViewHelper.this.onCompletionListener != null) {
-        LegacyVideoViewHelper.this.onCompletionListener.onCompletion(mp);
+      if (helper.onCompletionListener != null) {
+        helper.onCompletionListener.onCompletion(mp);
       }
-      // Reset the player so it can be immediately reused.
+      // Reset the player so it can be reused.
       if (mediaPlayer != null) {
         mediaPlayer.reset();
       }
@@ -99,8 +102,8 @@ public class LegacyVideoViewHelper extends ToroPlayerHelper {
       onPlayerStateUpdated(playWhenReady, playerState);
 
       mediaPlayer = mp;
-      if (LegacyVideoViewHelper.this.onPreparedListener != null) {
-        LegacyVideoViewHelper.this.onPreparedListener.onPrepared(mp);
+      if (helper.onPreparedListener != null) {
+        helper.onPreparedListener.onPrepared(mp);
       }
       if (playWhenReady) play();
     });
@@ -167,6 +170,46 @@ public class LegacyVideoViewHelper extends ToroPlayerHelper {
     return new PlaybackInfo(C.INDEX_UNSET, playbackInfo.getResumePosition());
   }
 
+  @Override public void setVolume(float volume) {
+    this.setVolumeInfo(new VolumeInfo(volume == 0, volume));
+  }
+
+  @Override public float getVolume() {
+    return volumeInfo.getVolume();
+  }
+
+  @Override public void setVolumeInfo(@NonNull VolumeInfo volumeInfo) {
+    if (mediaPlayer == null) return;
+    boolean changed = !this.volumeInfo.equals(checkNotNull(volumeInfo));
+    if (changed) {
+      float volume = volumeInfo.isMute() ? 0 : volumeInfo.getVolume();
+      mediaPlayer.setVolume(volume, volume);
+      this.volumeInfo.setTo(volumeInfo.isMute(), volumeInfo.getVolume());
+      if (volumeChangeListeners != null) {
+        for (ToroPlayer.OnVolumeChangeListener listener : volumeChangeListeners) {
+          listener.onVolumeChanged(volumeInfo);
+        }
+      }
+    }
+  }
+
+  @NonNull @Override public VolumeInfo getVolumeInfo() {
+    return this.volumeInfo;
+  }
+
+  // Use a Set to prevent duplicated setup.
+  protected Set<ToroPlayer.OnVolumeChangeListener> volumeChangeListeners;
+
+  @Override
+  public void addOnVolumeChangeListener(@NonNull ToroPlayer.OnVolumeChangeListener listener) {
+    if (volumeChangeListeners == null) volumeChangeListeners = new HashSet<>();
+    volumeChangeListeners.add(checkNotNull(listener));
+  }
+
+  @Override public void removeOnVolumeChangeListener(ToroPlayer.OnVolumeChangeListener listener) {
+    if (volumeChangeListeners != null) volumeChangeListeners.remove(listener);
+  }
+
   void updateResumePosition() {
     try {
       if (mediaPlayer != null) playbackInfo.setResumePosition(mediaPlayer.getCurrentPosition());
@@ -175,7 +218,7 @@ public class LegacyVideoViewHelper extends ToroPlayerHelper {
     }
   }
 
-  @Override public void cancel() throws Exception {
+  @Override public void release() {
     this.playerView.setOnCompletionListener(null);
     this.playerView.setOnPreparedListener(null);
     this.playerView.setPlayerEventListener(null);
@@ -186,6 +229,6 @@ public class LegacyVideoViewHelper extends ToroPlayerHelper {
     this.mediaPlayer = null;
     this.playerState = State.STATE_IDLE;
     this.playWhenReady = false;
-    super.cancel();
+    super.release();
   }
 }

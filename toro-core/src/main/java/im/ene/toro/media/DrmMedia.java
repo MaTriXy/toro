@@ -16,15 +16,23 @@
 
 package im.ene.toro.media;
 
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+
 /**
  * @author eneim | 6/5/17.
+ *
+ *         A definition of DRM media type.
  */
 
 public interface DrmMedia {
 
-  String getType();
+  // DRM Scheme
+  @NonNull String getType();
 
-  String getLicenseUrl();
+  @Nullable String getLicenseUrl();
 
-  String[] getKeyRequestPropertiesArray();
+  @Nullable String[] getKeyRequestPropertiesArray();
+
+  boolean multiSession();
 }

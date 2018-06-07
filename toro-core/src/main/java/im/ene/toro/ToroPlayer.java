@@ -20,14 +20,17 @@ import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.view.View;
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.source.MediaSource;
 import im.ene.toro.media.PlaybackInfo;
+import im.ene.toro.media.VolumeInfo;
 import im.ene.toro.widget.Container;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
+ * Definition of a Player used in Toro. Besides common playback command ({@link #play()}, {@link
+ * #pause()}, etc), it provides the library necessary information about the playback and
+ * components.
+ *
  * @author eneim | 5/31/17.
  */
 
@@ -41,13 +44,12 @@ public interface ToroPlayer {
    * Initialize resource for the incoming playback. After this point, {@link ToroPlayer} should be
    * able to start the playback at anytime in the future (This doesn't mean that any call to {@link
    * ToroPlayer#play()} will start the playback immediately. It can start buffering enough resource
-   * before any rendering). {@link ExoPlayer} should call {@link ExoPlayer#prepare(MediaSource)}
-   * here, and not start playback when ready.
+   * before any rendering).
    *
    * @param container the RecyclerView contains this Player.
    * @param playbackInfo initialize info for the preparation.
    */
-  void initialize(@NonNull Container container, @Nullable PlaybackInfo playbackInfo);
+  void initialize(@NonNull Container container, @NonNull PlaybackInfo playbackInfo);
 
   /**
    * Start playback or resume from a pausing state.
@@ -84,13 +86,18 @@ public interface ToroPlayer {
 
     void onPaused();  // ExoPlayer state: 3, play flag: false
 
-    void onCompleted(Container container, ToroPlayer player); // ExoPlayer state: 4
+    void onCompleted(); // ExoPlayer state: 4
+  }
+
+  interface OnVolumeChangeListener {
+
+    void onVolumeChanged(@NonNull VolumeInfo volumeInfo);
   }
 
   // Adapt from ExoPlayer.
-  @SuppressWarnings("UnnecessaryInterfaceModifier") @Retention(RetentionPolicy.SOURCE)  //
+  @Retention(RetentionPolicy.SOURCE)  //
   @IntDef({ State.STATE_IDLE, State.STATE_BUFFERING, State.STATE_READY, State.STATE_END })  //
-  public @interface State {
+  @interface State {
     int STATE_IDLE = 1;
     int STATE_BUFFERING = 2;
     int STATE_READY = 3;
