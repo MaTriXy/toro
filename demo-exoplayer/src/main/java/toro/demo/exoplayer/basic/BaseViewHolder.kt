@@ -16,13 +16,13 @@
 
 package toro.demo.exoplayer.basic
 
-import android.support.v7.widget.RecyclerView.ViewHolder
 import android.view.View
+import androidx.recyclerview.widget.RecyclerView.ViewHolder
 
 /**
  * @author eneim (2018/01/23).
  */
 abstract class BaseViewHolder(itemView: View) : ViewHolder(itemView) {
 
-    open fun bind(item: Any?) {}
+  open fun bind(item: Any?) {}
 }

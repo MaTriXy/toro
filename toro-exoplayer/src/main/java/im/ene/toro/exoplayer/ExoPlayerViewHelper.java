@@ -17,7 +17,8 @@
 package im.ene.toro.exoplayer;
 
 import android.net.Uri;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.ui.PlayerView;
 import im.ene.toro.ToroPlayer;
@@ -42,6 +43,7 @@ public class ExoPlayerViewHelper extends ToroPlayerHelper {
 
   @NonNull private final ExoPlayable playable;
   @NonNull private final MyEventListeners listeners;
+  private final boolean lazyPrepare;
 
   // Container is no longer required for constructing new instance.
   @SuppressWarnings("unused") @RemoveIn(version = "3.6.0") @Deprecated  //
@@ -53,18 +55,19 @@ public class ExoPlayerViewHelper extends ToroPlayerHelper {
     this(player, uri, null);
   }
 
-  public ExoPlayerViewHelper(@NonNull ToroPlayer player, @NonNull Uri uri, String fileExt) {
+  public ExoPlayerViewHelper(@NonNull ToroPlayer player, @NonNull Uri uri,
+      @Nullable String fileExt) {
     this(player, uri, fileExt, with(player.getPlayerView().getContext()).getDefaultCreator());
   }
 
   /** Config instance should be kept as global instance. */
-  public ExoPlayerViewHelper(@NonNull ToroPlayer player, @NonNull Uri uri, String fileExt,
+  public ExoPlayerViewHelper(@NonNull ToroPlayer player, @NonNull Uri uri, @Nullable String fileExt,
       @NonNull Config config) {
     this(player, uri, fileExt,
         with(player.getPlayerView().getContext()).getCreator(checkNotNull(config)));
   }
 
-  public ExoPlayerViewHelper(@NonNull ToroPlayer player, @NonNull Uri uri, String fileExt,
+  public ExoPlayerViewHelper(@NonNull ToroPlayer player, @NonNull Uri uri, @Nullable String fileExt,
       @NonNull ExoCreator creator) {
     this(player, new ExoPlayable(creator, uri, fileExt));
   }
@@ -73,23 +76,28 @@ public class ExoPlayerViewHelper extends ToroPlayerHelper {
     super(player);
     //noinspection ConstantConditions
     if (player.getPlayerView() == null || !(player.getPlayerView() instanceof PlayerView)) {
-      throw new IllegalArgumentException("Require non-null SimpleExoPlayerView");
+      throw new IllegalArgumentException("Require non-null PlayerView");
     }
 
     listeners = new MyEventListeners();
     this.playable = playable;
+    this.lazyPrepare = true;
   }
 
   @Override protected void initialize(@NonNull PlaybackInfo playbackInfo) {
     playable.setPlaybackInfo(playbackInfo);
     playable.addEventListener(listeners);
-    playable.prepare(false);
+    playable.addErrorListener(super.getErrorListeners());
+    playable.addOnVolumeChangeListener(super.getVolumeChangeListeners());
+    playable.prepare(!lazyPrepare);
     playable.setPlayerView((PlayerView) player.getPlayerView());
   }
 
   @Override public void release() {
     super.release();
     playable.setPlayerView(null);
+    playable.removeOnVolumeChangeListener(super.getVolumeChangeListeners());
+    playable.removeErrorListener(super.getErrorListeners());
     playable.removeEventListener(listeners);
     playable.release();
   }
@@ -126,24 +134,17 @@ public class ExoPlayerViewHelper extends ToroPlayerHelper {
     return playable.getPlaybackInfo();
   }
 
-  @SuppressWarnings("WeakerAccess") //
+  @Override public void setPlaybackInfo(@NonNull PlaybackInfo playbackInfo) {
+    this.playable.setPlaybackInfo(playbackInfo);
+  }
+
   public void addEventListener(@NonNull Playable.EventListener listener) {
     //noinspection ConstantConditions
     if (listener != null) this.listeners.add(listener);
   }
 
-  @SuppressWarnings("WeakerAccess") //
   public void removeEventListener(Playable.EventListener listener) {
     this.listeners.remove(listener);
-  }
-
-  @Override
-  public void addOnVolumeChangeListener(@NonNull ToroPlayer.OnVolumeChangeListener listener) {
-    this.playable.addOnVolumeChangeListener(checkNotNull(listener));
-  }
-
-  @Override public void removeOnVolumeChangeListener(ToroPlayer.OnVolumeChangeListener listener) {
-    this.playable.removeOnVolumeChangeListener(listener);
   }
 
   // A proxy, to also hook into ToroPlayerHelper's state change event.
@@ -155,6 +156,14 @@ public class ExoPlayerViewHelper extends ToroPlayerHelper {
     @Override public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
       ExoPlayerViewHelper.super.onPlayerStateUpdated(playWhenReady, playbackState); // important
       super.onPlayerStateChanged(playWhenReady, playbackState);
+    }
+
+    @Override public void onRenderedFirstFrame() {
+      super.onRenderedFirstFrame();
+      internalListener.onFirstFrameRendered();
+      for (ToroPlayer.EventListener listener : ExoPlayerViewHelper.super.getEventListeners()) {
+        listener.onFirstFrameRendered();
+      }
     }
   }
 }

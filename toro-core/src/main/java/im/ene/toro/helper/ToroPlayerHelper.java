@@ -19,18 +19,17 @@ package im.ene.toro.helper;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.support.annotation.CallSuper;
-import android.support.annotation.FloatRange;
-import android.support.annotation.NonNull;
+import androidx.annotation.CallSuper;
+import androidx.annotation.FloatRange;
+import androidx.annotation.NonNull;
+import androidx.annotation.RestrictTo;
 import im.ene.toro.ToroPlayer;
 import im.ene.toro.ToroPlayer.EventListener;
-import im.ene.toro.ToroPlayer.OnVolumeChangeListener;
 import im.ene.toro.ToroPlayer.State;
 import im.ene.toro.annotations.RemoveIn;
 import im.ene.toro.media.PlaybackInfo;
 import im.ene.toro.media.VolumeInfo;
 import im.ene.toro.widget.Container;
-import java.util.HashSet;
 
 import static im.ene.toro.ToroUtil.checkNotNull;
 
@@ -43,7 +42,6 @@ import static im.ene.toro.ToroUtil.checkNotNull;
  *
  * @author eneim | 6/11/17.
  */
-@SuppressWarnings("WeakerAccess") //
 public abstract class ToroPlayerHelper {
 
   private final Handler handler = new Handler(Looper.getMainLooper(), new Handler.Callback() {
@@ -55,8 +53,8 @@ public abstract class ToroPlayerHelper {
           break;
         case State.STATE_BUFFERING /* Player.STATE_BUFFERING */:
           internalListener.onBuffering();
-          for (EventListener callback : eventListeners) {
-            callback.onBuffering();
+          for (EventListener listener : getEventListeners()) {
+            listener.onBuffering();
           }
           break;
         case State.STATE_READY /*  Player.STATE_READY */:
@@ -66,18 +64,18 @@ public abstract class ToroPlayerHelper {
             internalListener.onPaused();
           }
 
-          for (EventListener callback : eventListeners) {
+          for (EventListener listener : getEventListeners()) {
             if (playWhenReady) {
-              callback.onPlaying();
+              listener.onPlaying();
             } else {
-              callback.onPaused();
+              listener.onPaused();
             }
           }
           break;
         case State.STATE_END /* Player.STATE_ENDED */:
           internalListener.onCompleted();
-          for (EventListener callback : eventListeners) {
-            callback.onCompleted();
+          for (EventListener listener : getEventListeners()) {
+            listener.onCompleted();
           }
           break;
         default:
@@ -92,8 +90,21 @@ public abstract class ToroPlayerHelper {
   // This instance should be setup from #initialize and cleared from #release
   protected Container container;
 
-  final HashSet<EventListener> eventListeners = new HashSet<>();
-  final EventListener internalListener = new EventListener() {
+  @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) //
+  private ToroPlayer.EventListeners eventListeners;
+
+  @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) //
+  private ToroPlayer.VolumeChangeListeners volumeChangeListeners;
+
+  @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) //
+  private ToroPlayer.ErrorListeners errorListeners;
+
+  @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) //
+  protected final EventListener internalListener = new EventListener() {
+    @Override public void onFirstFrameRendered() {
+
+    }
+
     @Override public void onBuffering() {
       // do nothing
     }
@@ -105,8 +116,8 @@ public abstract class ToroPlayerHelper {
     @Override public void onPaused() {
       player.getPlayerView().setKeepScreenOn(false);
       if (container != null) {
-        container.savePlaybackInfo(player.getPlayerOrder(),
-            checkNotNull(player.getCurrentPlaybackInfo()));
+        container.savePlaybackInfo( //
+            player.getPlayerOrder(), checkNotNull(player.getCurrentPlaybackInfo()));
       }
     }
 
@@ -122,13 +133,12 @@ public abstract class ToroPlayerHelper {
     this.player = player;
   }
 
-  @SuppressWarnings("ConstantConditions")
-  public final void addPlayerEventListener(@NonNull EventListener eventListener) {
-    if (eventListener != null) this.eventListeners.add(eventListener);
+  public final void addPlayerEventListener(@NonNull EventListener listener) {
+    getEventListeners().add(checkNotNull(listener));
   }
 
-  public final void removePlayerEventListener(EventListener eventListener) {
-    this.eventListeners.remove(eventListener);
+  public final void removePlayerEventListener(EventListener listener) {
+    if (eventListeners != null) eventListeners.remove(listener);
   }
 
   /**
@@ -143,8 +153,7 @@ public abstract class ToroPlayerHelper {
    */
   protected abstract void initialize(@NonNull PlaybackInfo playbackInfo);
 
-  @CallSuper
-  public void initialize(@NonNull Container container, @NonNull PlaybackInfo playbackInfo) {
+  public final void initialize(@NonNull Container container, @NonNull PlaybackInfo playbackInfo) {
     this.container = container;
     this.initialize(playbackInfo);
   }
@@ -179,9 +188,41 @@ public abstract class ToroPlayerHelper {
    */
   @NonNull public abstract PlaybackInfo getLatestPlaybackInfo();
 
-  public abstract void addOnVolumeChangeListener(@NonNull OnVolumeChangeListener listener);
+  public abstract void setPlaybackInfo(@NonNull PlaybackInfo playbackInfo);
 
-  public abstract void removeOnVolumeChangeListener(OnVolumeChangeListener listener);
+  @CallSuper
+  public void addOnVolumeChangeListener(@NonNull ToroPlayer.OnVolumeChangeListener listener) {
+    getVolumeChangeListeners().add(checkNotNull(listener));
+  }
+
+  @CallSuper public void removeOnVolumeChangeListener(ToroPlayer.OnVolumeChangeListener listener) {
+    if (volumeChangeListeners != null) volumeChangeListeners.remove(listener);
+  }
+
+  @CallSuper public void addErrorListener(@NonNull ToroPlayer.OnErrorListener listener) {
+    getErrorListeners().add(checkNotNull(listener));
+  }
+
+  @CallSuper public void removeErrorListener(ToroPlayer.OnErrorListener listener) {
+    if (errorListeners != null) errorListeners.remove(listener);
+  }
+
+  @NonNull protected final ToroPlayer.EventListeners getEventListeners() {
+    if (eventListeners == null) eventListeners = new ToroPlayer.EventListeners();
+    return eventListeners;
+  }
+
+  @NonNull protected final ToroPlayer.VolumeChangeListeners getVolumeChangeListeners() {
+    if (volumeChangeListeners == null) {
+      volumeChangeListeners = new ToroPlayer.VolumeChangeListeners();
+    }
+    return volumeChangeListeners;
+  }
+
+  @NonNull protected final ToroPlayer.ErrorListeners getErrorListeners() {
+    if (errorListeners == null) errorListeners = new ToroPlayer.ErrorListeners();
+    return errorListeners;
+  }
 
   // Mimic ExoPlayer
   @CallSuper protected final void onPlayerStateUpdated(boolean playWhenReady,
@@ -194,7 +235,7 @@ public abstract class ToroPlayerHelper {
     this.container = null;
   }
 
-  @Override public String toString() {
+  @NonNull @Override public String toString() {
     return "ToroLib:Helper{" + "player=" + player + ", container=" + container + '}';
   }
 }

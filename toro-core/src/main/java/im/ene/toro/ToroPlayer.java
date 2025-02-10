@@ -16,15 +16,15 @@
 
 package im.ene.toro;
 
-import android.support.annotation.IntDef;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.view.View;
+import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
 import im.ene.toro.media.PlaybackInfo;
 import im.ene.toro.media.VolumeInfo;
 import im.ene.toro.widget.Container;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * Definition of a Player used in Toro. Besides common playback command ({@link #play()}, {@link
@@ -80,6 +80,8 @@ public interface ToroPlayer {
    */
   interface EventListener {
 
+    void onFirstFrameRendered();
+
     void onBuffering(); // ExoPlayer state: 2
 
     void onPlaying(); // ExoPlayer state: 3, play flag: true
@@ -92,6 +94,64 @@ public interface ToroPlayer {
   interface OnVolumeChangeListener {
 
     void onVolumeChanged(@NonNull VolumeInfo volumeInfo);
+  }
+
+  interface OnErrorListener {
+
+    void onError(Exception error);
+  }
+
+  class EventListeners extends CopyOnWriteArraySet<EventListener> implements EventListener {
+
+    @Override public void onFirstFrameRendered() {
+      for (EventListener listener : this) {
+        listener.onFirstFrameRendered();
+      }
+    }
+
+    @Override public void onBuffering() {
+      for (EventListener listener : this) {
+        listener.onBuffering();
+      }
+    }
+
+    @Override public void onPlaying() {
+      for (EventListener listener : this) {
+        listener.onPlaying();
+      }
+    }
+
+    @Override public void onPaused() {
+      for (EventListener listener : this) {
+        listener.onPaused();
+      }
+    }
+
+    @Override public void onCompleted() {
+      for (EventListener listener : this) {
+        listener.onCompleted();
+      }
+    }
+  }
+
+  class ErrorListeners extends CopyOnWriteArraySet<OnErrorListener>
+      implements ToroPlayer.OnErrorListener {
+
+    @Override public void onError(Exception error) {
+      for (ToroPlayer.OnErrorListener listener : this) {
+        listener.onError(error);
+      }
+    }
+  }
+
+  class VolumeChangeListeners extends CopyOnWriteArraySet<ToroPlayer.OnVolumeChangeListener>
+      implements ToroPlayer.OnVolumeChangeListener {
+
+    @Override public void onVolumeChanged(@NonNull VolumeInfo volumeInfo) {
+      for (ToroPlayer.OnVolumeChangeListener listener : this) {
+        listener.onVolumeChanged(volumeInfo);
+      }
+    }
   }
 
   // Adapt from ExoPlayer.

@@ -17,19 +17,21 @@
 package im.ene.toro.sample.basic;
 
 import android.net.Uri;
-import android.support.annotation.NonNull;
-import android.support.v7.widget.RecyclerView;
 import android.view.View;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import com.google.android.exoplayer2.ui.PlayerView;
 import im.ene.toro.ToroPlayer;
 import im.ene.toro.ToroUtil;
+import im.ene.toro.exoplayer.ExoPlayerDispatcher;
 import im.ene.toro.exoplayer.ExoPlayerViewHelper;
 import im.ene.toro.helper.ToroPlayerHelper;
 import im.ene.toro.media.PlaybackInfo;
 import im.ene.toro.sample.R;
 import im.ene.toro.widget.Container;
+import im.ene.toro.widget.PressablePlayerSelector;
 
 /**
  * @author eneim (7/1/17).
@@ -47,9 +49,10 @@ class BasicPlayerViewHolder extends RecyclerView.ViewHolder implements ToroPlaye
 
   @BindView(R.id.player) PlayerView playerView;
 
-  public BasicPlayerViewHolder(View itemView) {
+  public BasicPlayerViewHolder(View itemView, PressablePlayerSelector selector) {
     super(itemView);
     ButterKnife.bind(this, itemView);
+    if (selector != null) playerView.setControlDispatcher(new ExoPlayerDispatcher(selector, this));
   }
 
   @NonNull @Override public View getPlayerView() {

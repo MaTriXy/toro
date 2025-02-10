@@ -1,6 +1,72 @@
 Changelog
 ===========
 
+3.7.0.2010003 (2020/02/15)
+-----------------------
+
+This release is to support ExoPlayer *2.10.3*. This will be the last version of ExoPlayer *2.10.x* to be supported. From next release, *Toro* will support
+ExoPlayer *2.11.2* and newer.
+
+- **[Update]**: ExoPlayer to 2.10.3. Related classes are updated with backward compatibility and some deprecation to *Toro* implementations.
+- **[Update]**: Demo for mopub now uses mopub *5.10.0* for Android.
+- **[Update]**: AdsExoPlayerViewHelper now requires *AdsLoader.AdViewProvider* instead of *ViewGroup* as `adsContainer`. This is to update with ExoPlayer 2.10.3.
+- **[Update]**: `Config` construction now allow to pass `Context`, and creating new `Config` with `Context` is recommended way.
+
+Some other changes may require migration effort, please feel free to create **Github Issues**.
+
+3.7.0.2905-A1 (2019/10/18)
+-----------------------
+
+This release is a middle-stage release to insist the full release of ~3.7.0-2010005~ 3.7.0-2010003.
+
+This alpha release contains the following significant changes:
+
+- Migrate to AndroidX. Toro will now depends on AndroidX and other latest Jetpack libraries.
+- Update ExoPlayer to 2.9.5. As said, the target will be ExoPlayer ~2.10.5~ 2.10.3. Since ExoPlayer 2.10.x is update with many things may not work well with 2.9.x, this release can also be helpful for those who depends on 2.9.5 for long term.
+- ``ToroPlayerHelper`` and ``Playable`` interface now have ``setPlaybackInfo`` method to support manual ``PlaybackInfo`` setup. Default implementation classes are updated with this change.
+
+3.6.2.2903 (2019/01/18)
+-----------------------
+
+## Happy New Year 2019, the first release this year just to make the lib work with latest ExoPlayer. 
+
+- **[Update]** Update to ExoPlayer 2.9.3, Android Studio 3.3 final.
+
+3.6.2.2804 (2018/12/16)
+-----------------------
+
+- **[Update]** Update to ExoPlayer 2.8.4, Android 28 and Support Libraries 28, Android Studio 3.3 RC2.
+- **[Update]** Add ``onFirstFrameRendered()`` to ToroPlayer.EventListener. The method is called when the video is first rendered to the View. This is a signal to the client to hide the thumbnail view for example. Implementation of Helper class is responsible for calling this callback. When used with ``MediaPlayer`` this will only called on Android 17 and above.
+- **[Update]** Add CopyOnWriteArraySet implementation for listeners of ToroPlayer. 
+- **[Update]** ``toro_exo_player_view`` has a change in layout structure: the ``ProgressBar`` is brought to the front, in front of ``exo_overlay`` FrameLayout.
+
+- **[Change/Breaking]** ``ToroPlayerHelper#initialize(Container, PlaybackInfo)`` is now final. Any implementation that override this method should be updated. The recommended way is to override the ``ToroPlayerHelper#initialize(PlaybackInfo)`` only.
+
+- **[Demo App]** Better build config for app module. Proguard is included to demonstrate real life scenario. APK of this demo is included in the release tag.
+
+3.6.1.2802 (2018/09/11)
+-----------------------
+
+- **[Fix]** Fix a bug that allow ExoPlayer instance to reuse VolumeInfo of a Player for other Player.
+
+3.6.0.2802 (2018/08/27)
+-----------------------
+
+- **[Update]** Now use ExoPlayer 2.8.2
+- **[Update]** Version name format to indicate which version of ExoPlayer is supported.
+- **[Update]** Container#savePlaybackInfo now accepts Nullable PlaybackInfo but it will be ignored.
+
+- **[Change/Breaking]** Config (in toro extension for exoplayer) no longer use array of DrmSessionManager.
+- **[Change/Breaking]** ToroExo#createDrmSessionManager no longer requires Handler parameter.
+
+- **[New]** Introduce ToroPlayer.OnErrorListener and add/remove methods for it.
+- **[New]** ``ToroControlView`` now also available for toro-exoplayer. Clients can simply use ``PlayerView`` with 'player_layout_id' to be ``@layout/toro_exo_player_view``. ``ToroControlView`` is an extension of ``PlayerControlView`` that is empowered with the ability to change Volume and mute/un-mute switching.
+
+- **[New/Beta]** Add new built-in PlayerSelector: ``PressablePlayerSelector`` which is also a ``View.OnLongClickListener``. This can be used when client allows user to long-press to a ``ToroPlayer`` to make it starts playing.
+- **[New/Beta]** Add new ``ExoPlayerDispatcher`` which is a ``ControlDispatcher`` for ExoPlayer ``PlayerControlView``. Use this with ``PlayerView`` to allow user to control the playback using the UI. ``ExoPlayerDispatcher`` connects to ``Container`` to correctly update the playback position.
+- **[New/Beta]** Add ``AdsExoPlayerViewHelper`` that integrate with ExoPlayer IMA Extension.
+- **[New/Beta]** Add ``AdsPlayable`` that integrate with ExoPlayer IMA Extension. This ``Playable`` can be used together with ``AdsExoPlayerViewHelper`` or standalone.
+
 ~~3.5.0 (2018/05/18)~~  3.5.2 (2018/05/21)
 ------------------
 

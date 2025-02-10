@@ -16,19 +16,22 @@
 
 package im.ene.toro.exoplayer;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import android.content.Context;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.util.ObjectsCompat;
 import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.DefaultRenderersFactory.ExtensionRendererMode;
 import com.google.android.exoplayer2.LoadControl;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.drm.DrmSessionManager;
+import com.google.android.exoplayer2.drm.FrameworkMediaCrypto;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer2.upstream.cache.Cache;
+import com.google.android.exoplayer2.util.Clock;
 import im.ene.toro.annotations.Beta;
-import java.util.Arrays;
 
 import static com.google.android.exoplayer2.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF;
 import static im.ene.toro.ToroUtil.checkNotNull;
@@ -44,6 +47,9 @@ import static im.ene.toro.ToroUtil.checkNotNull;
 @SuppressWarnings("SimplifiableIfStatement")  //
 public final class Config {
 
+  @Nullable
+  private final Context context;
+
   // primitive flags
   @ExtensionRendererMode final int extensionMode;
 
@@ -53,23 +59,29 @@ public final class Config {
   @NonNull final MediaSourceBuilder mediaSourceBuilder;
 
   // Nullable options
-  @SuppressWarnings("WeakerAccess") //
-  @Nullable final DrmSessionManager[] drmSessionManagers;
+  @Nullable final DrmSessionManager<FrameworkMediaCrypto> drmSessionManager;
   @Nullable final Cache cache; // null by default
   // If null, ExoCreator must come up with a default one.
   // This is to help customizing the Data source, for example using OkHttp extension.
   @Nullable final DataSource.Factory dataSourceFactory;
+  final Clock clock;
 
-  Config(int extensionMode, @NonNull BaseMeter meter, @NonNull LoadControl loadControl,
-      @Nullable DataSource.Factory dataSourceFactory, @NonNull MediaSourceBuilder mediaSourceBuilder,
-      @Nullable DrmSessionManager[] drmSessionManagers, @Nullable Cache cache) {
+  @SuppressWarnings("WeakerAccess") //
+  Config(@Nullable Context context, int extensionMode, @NonNull BaseMeter meter,
+      @NonNull LoadControl loadControl,
+      @Nullable DataSource.Factory dataSourceFactory,
+      @NonNull MediaSourceBuilder mediaSourceBuilder,
+      @Nullable DrmSessionManager<FrameworkMediaCrypto> drmSessionManager, @Nullable Cache cache,
+      Clock clock) {
+    this.context = context != null ? context.getApplicationContext() : null;
     this.extensionMode = extensionMode;
     this.meter = meter;
     this.loadControl = loadControl;
     this.dataSourceFactory = dataSourceFactory;
     this.mediaSourceBuilder = mediaSourceBuilder;
-    this.drmSessionManagers = drmSessionManagers;
+    this.drmSessionManager = drmSessionManager;
     this.cache = cache;
+    this.clock = clock;
   }
 
   @Override public boolean equals(Object o) {
@@ -82,11 +94,10 @@ public final class Config {
     if (!meter.equals(config.meter)) return false;
     if (!loadControl.equals(config.loadControl)) return false;
     if (!mediaSourceBuilder.equals(config.mediaSourceBuilder)) return false;
-    // Probably incorrect - comparing Object[] arrays with Arrays.equals
-    if (!Arrays.equals(drmSessionManagers, config.drmSessionManagers)) return false;
-    if (cache != null ? !cache.equals(config.cache) : config.cache != null) return false;
-    return dataSourceFactory != null ? dataSourceFactory.equals(config.dataSourceFactory)
-        : config.dataSourceFactory == null;
+    if (!ObjectsCompat.equals(drmSessionManager, config.drmSessionManager)) return false;
+    if (!ObjectsCompat.equals(cache, config.cache)) return false;
+    if (!ObjectsCompat.equals(clock, config.clock)) return false;
+    return ObjectsCompat.equals(dataSourceFactory, config.dataSourceFactory);
   }
 
   @Override public int hashCode() {
@@ -94,33 +105,53 @@ public final class Config {
     result = 31 * result + meter.hashCode();
     result = 31 * result + loadControl.hashCode();
     result = 31 * result + mediaSourceBuilder.hashCode();
-    result = 31 * result + Arrays.hashCode(drmSessionManagers);
+    result = 31 * result + (drmSessionManager != null ? drmSessionManager.hashCode() : 0);
     result = 31 * result + (cache != null ? cache.hashCode() : 0);
     result = 31 * result + (dataSourceFactory != null ? dataSourceFactory.hashCode() : 0);
+    result = 31 * result + (clock != null ? clock.hashCode() : 0);
     return result;
   }
 
   @SuppressWarnings("unused") public Builder newBuilder() {
-    return new Builder().setCache(this.cache)
-        .setDrmSessionManagers(this.drmSessionManagers)
+    return new Builder(context).setCache(this.cache)
+        .setDrmSessionManager(this.drmSessionManager)
         .setExtensionMode(this.extensionMode)
         .setLoadControl(this.loadControl)
         .setMediaSourceBuilder(this.mediaSourceBuilder)
-        .setMeter(this.meter);
+        .setMeter(this.meter)
+        .setClock(this.clock);
   }
 
   /// Builder
   @SuppressWarnings({ "unused", "WeakerAccess" }) //
   public static final class Builder {
+
+    @Nullable // only for backward compatibility
+    final Context context;
+
+    /**
+     * @deprecated Use the constructor with nonnull {@link Context} instead.
+     */
+    @Deprecated
+    public Builder() {
+      this(null);
+    }
+
+    public Builder(@Nullable Context context) {
+      this.context = context != null ? context.getApplicationContext() : null;
+      DefaultBandwidthMeter bandwidthMeter =
+          new DefaultBandwidthMeter.Builder(this.context).build();
+      meter = new BaseMeter<>(bandwidthMeter);
+    }
+
     @ExtensionRendererMode private int extensionMode = EXTENSION_RENDERER_MODE_OFF;
-    private final DefaultBandwidthMeter bandwidthMeter = new DefaultBandwidthMeter();
-    @SuppressWarnings("unchecked")  //
-    private BaseMeter meter = new BaseMeter(bandwidthMeter, bandwidthMeter);
+    private BaseMeter meter;
     private LoadControl loadControl = new DefaultLoadControl();
     private DataSource.Factory dataSourceFactory = null;
     private MediaSourceBuilder mediaSourceBuilder = MediaSourceBuilder.DEFAULT;
-    private DrmSessionManager[] drmSessionManagers = null;
+    private DrmSessionManager<FrameworkMediaCrypto> drmSessionManager = null;
     private Cache cache = null;
+    private Clock clock = Clock.DEFAULT;
 
     public Builder setExtensionMode(@ExtensionRendererMode int extensionMode) {
       this.extensionMode = extensionMode;
@@ -149,9 +180,10 @@ public final class Config {
       return this;
     }
 
-    @Beta
-    public Builder setDrmSessionManagers(@Nullable DrmSessionManager[] drmSessionManagers) {
-      this.drmSessionManagers = drmSessionManagers;
+    @Beta //
+    public Builder setDrmSessionManager(
+        @Nullable DrmSessionManager<FrameworkMediaCrypto> drmSessionManager) {
+      this.drmSessionManager = drmSessionManager;
       return this;
     }
 
@@ -160,9 +192,14 @@ public final class Config {
       return this;
     }
 
+    public Builder setClock(Clock clock) {
+      this.clock = clock;
+      return this;
+    }
+
     public Config build() {
-      return new Config(extensionMode, meter, loadControl, dataSourceFactory,
-          mediaSourceBuilder, drmSessionManagers, cache);
+      return new Config(context, extensionMode, meter, loadControl, dataSourceFactory,
+          mediaSourceBuilder, drmSessionManager, cache, clock);
     }
   }
 }

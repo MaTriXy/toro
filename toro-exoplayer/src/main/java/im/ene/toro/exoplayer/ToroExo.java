@@ -19,15 +19,17 @@ package im.ene.toro.exoplayer;
 import android.annotation.SuppressLint;
 import android.app.Application;
 import android.content.Context;
-import android.os.Handler;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.RequiresApi;
-import android.support.annotation.RestrictTo;
-import android.support.annotation.StringRes;
-import android.support.v4.util.Pools;
+import android.content.pm.PackageInfo;
+import android.os.Build;
 import android.text.TextUtils;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.annotation.RestrictTo;
+import androidx.annotation.StringRes;
+import androidx.core.util.Pools;
+import com.google.android.exoplayer2.ExoPlayerLibraryInfo;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.drm.DefaultDrmSessionManager;
 import com.google.android.exoplayer2.drm.DrmSessionManager;
@@ -51,7 +53,6 @@ import java.util.UUID;
 import static android.widget.Toast.LENGTH_SHORT;
 import static com.google.android.exoplayer2.drm.UnsupportedDrmException.REASON_UNSUPPORTED_SCHEME;
 import static com.google.android.exoplayer2.util.Util.getDrmUuid;
-import static com.google.android.exoplayer2.util.Util.getUserAgent;
 import static im.ene.toro.ToroUtil.checkNotNull;
 import static im.ene.toro.exoplayer.BuildConfig.LIB_NAME;
 import static java.lang.Runtime.getRuntime;
@@ -126,8 +127,8 @@ public final class ToroExo {
     return creator;
   }
 
-  public final Config getDefaultConfig() {
-    if (defaultConfig == null) defaultConfig = new Config.Builder().build();
+  @SuppressWarnings("WeakerAccess") public final Config getDefaultConfig() {
+    if (defaultConfig == null) defaultConfig = new Config.Builder(context).build();
     return defaultConfig;
   }
 
@@ -206,33 +207,33 @@ public final class ToroExo {
    *
    * Usage:
    * <pre><code>
-   *   DrmSessionManager manager = ToroExo.with(context).createDrmSessionManager(mediaDrm, null);
-   *   Config config = new Config.Builder().setDrmSessionManagers([manager]);
+   *   DrmSessionManager manager = ToroExo.with(context).createDrmSessionManager(mediaDrm);
+   *   Config config = new Config.Builder().setDrmSessionManager(manager);
    *   ExoCreator creator = ToroExo.with(context).getCreator(config);
    * </code></pre>
    */
-  @RequiresApi(18) @Nullable public DrmSessionManager<FrameworkMediaCrypto> createDrmSessionManager(
-      @NonNull DrmMedia drmMedia, @Nullable Handler handler) {
+  @SuppressWarnings("unused") @RequiresApi(18) @Nullable //
+  public DrmSessionManager<FrameworkMediaCrypto> createDrmSessionManager(@NonNull DrmMedia drm) {
     DrmSessionManager<FrameworkMediaCrypto> drmSessionManager = null;
     int errorStringId = R.string.error_drm_unknown;
     String subString = null;
     if (Util.SDK_INT < 18) {
       errorStringId = R.string.error_drm_not_supported;
     } else {
-      UUID drmSchemeUuid = getDrmUuid(checkNotNull(drmMedia).getType());
+      UUID drmSchemeUuid = getDrmUuid(checkNotNull(drm).getType());
       if (drmSchemeUuid == null) {
         errorStringId = R.string.error_drm_unsupported_scheme;
       } else {
         HttpDataSource.Factory factory = new DefaultHttpDataSourceFactory(appName);
         try {
-          drmSessionManager = buildDrmSessionManagerV18(drmSchemeUuid, drmMedia.getLicenseUrl(),
-              drmMedia.getKeyRequestPropertiesArray(), drmMedia.multiSession(), factory, handler);
+          drmSessionManager = buildDrmSessionManagerV18(drmSchemeUuid, drm.getLicenseUrl(),
+              drm.getKeyRequestPropertiesArray(), drm.multiSession(), factory);
         } catch (UnsupportedDrmException e) {
           e.printStackTrace();
           errorStringId = e.reason == REASON_UNSUPPORTED_SCHEME ? //
               R.string.error_drm_unsupported_scheme : R.string.error_drm_unknown;
           if (e.reason == REASON_UNSUPPORTED_SCHEME) {
-            subString = drmMedia.getType();
+            subString = drm.getType();
           }
         }
       }
@@ -249,8 +250,8 @@ public final class ToroExo {
 
   @RequiresApi(18) private static DrmSessionManager<FrameworkMediaCrypto> buildDrmSessionManagerV18(
       @NonNull UUID uuid, @Nullable String licenseUrl, @Nullable String[] keyRequestPropertiesArray,
-      boolean multiSession, @NonNull HttpDataSource.Factory httpDataSourceFactory,
-      @Nullable Handler handler) throws UnsupportedDrmException {
+      boolean multiSession, @NonNull HttpDataSource.Factory httpDataSourceFactory)
+      throws UnsupportedDrmException {
     HttpMediaDrmCallback drmCallback = new HttpMediaDrmCallback(licenseUrl, httpDataSourceFactory);
     if (keyRequestPropertiesArray != null) {
       for (int i = 0; i < keyRequestPropertiesArray.length - 1; i += 2) {
@@ -259,11 +260,11 @@ public final class ToroExo {
       }
     }
     return new DefaultDrmSessionManager<>(uuid, FrameworkMediaDrm.newInstance(uuid), drmCallback,
-        null, handler, null, multiSession);
+        null, multiSession);
   }
 
   // Share the code of setting Volume. For use inside library only.
-  @SuppressWarnings("WeakerAccess") @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) //
+  @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP) //
   public static void setVolumeInfo(@NonNull SimpleExoPlayer player,
       @NonNull VolumeInfo volumeInfo) {
     if (player instanceof ToroExoPlayer) {
@@ -285,5 +286,24 @@ public final class ToroExo {
       float volume = player.getVolume();
       return new VolumeInfo(volume == 0, volume);
     }
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  private static String getUserAgent(Context context, String applicationName) {
+    String versionName;
+    try {
+      String packageName = context.getPackageName();
+      PackageInfo info = context.getPackageManager().getPackageInfo(packageName, 0);
+      versionName = info.versionName;
+    } catch (Exception e) {
+      versionName = "?";
+    }
+    return applicationName
+        + "/"
+        + versionName
+        + " (Linux;Android "
+        + Build.VERSION.RELEASE
+        + ") "
+        + ExoPlayerLibraryInfo.VERSION_SLASHY;
   }
 }

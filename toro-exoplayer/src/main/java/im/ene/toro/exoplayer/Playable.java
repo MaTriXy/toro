@@ -16,9 +16,9 @@
 
 package im.ene.toro.exoplayer;
 
-import android.support.annotation.FloatRange;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.FloatRange;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
@@ -37,8 +37,8 @@ import im.ene.toro.ToroPlayer;
 import im.ene.toro.annotations.RemoveIn;
 import im.ene.toro.media.PlaybackInfo;
 import im.ene.toro.media.VolumeInfo;
-import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * Define an interface to control a playback, specific for {@link SimpleExoPlayer} and {@link PlayerView}.
@@ -51,6 +51,7 @@ import java.util.List;
  * @since 3.4.0
  */
 
+@SuppressWarnings("unused") //
 public interface Playable {
 
   /**
@@ -194,6 +195,10 @@ public interface Playable {
    */
   @Nullable PlaybackParameters getParameters();
 
+  void addErrorListener(@NonNull ToroPlayer.OnErrorListener listener);
+
+  void removeErrorListener(@Nullable ToroPlayer.OnErrorListener listener);
+
   // Combine necessary interfaces.
   interface EventListener extends Player.EventListener, VideoListener, TextOutput, MetadataOutput {
 
@@ -248,6 +253,11 @@ public interface Playable {
 
     }
 
+    @Override
+    public void onSurfaceSizeChanged(int width, int height) {
+
+    }
+
     @Override public void onRenderedFirstFrame() {
 
     }
@@ -262,7 +272,7 @@ public interface Playable {
   }
 
   /** List of EventListener */
-  class EventListeners extends HashSet<EventListener> implements EventListener {
+  class EventListeners extends CopyOnWriteArraySet<EventListener> implements EventListener {
 
     EventListeners() {
     }
@@ -272,6 +282,13 @@ public interface Playable {
       for (EventListener eventListener : this) {
         eventListener.onVideoSizeChanged(width, height, unAppliedRotationDegrees,
             pixelWidthHeightRatio);
+      }
+    }
+
+    @Override
+    public void onSurfaceSizeChanged(int width, int height) {
+      for (EventListener eventListener : this) {
+        eventListener.onSurfaceSizeChanged(width, height);
       }
     }
 

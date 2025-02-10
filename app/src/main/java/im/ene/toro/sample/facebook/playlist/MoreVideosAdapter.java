@@ -16,13 +16,13 @@
 
 package im.ene.toro.sample.facebook.playlist;
 
-import android.support.annotation.IntRange;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import androidx.annotation.IntRange;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.RecyclerView;
 import im.ene.toro.CacheManager;
 import im.ene.toro.ToroPlayer;
 import im.ene.toro.sample.facebook.data.FbVideo;
@@ -40,13 +40,13 @@ import java.util.List;
   private final long initTimeStamp;
   private final List<FbVideo> items = new ArrayList<>();
 
-  OnCompleteCallback onCompleteCallback;
+  @SuppressWarnings("WeakerAccess") OnCompleteCallback onCompleteCallback;
 
-  public void setOnCompleteCallback(OnCompleteCallback onCompleteCallback) {
+  void setOnCompleteCallback(OnCompleteCallback onCompleteCallback) {
     this.onCompleteCallback = onCompleteCallback;
   }
 
-  public MoreVideosAdapter(@NonNull FbVideo baseItem, long initTimeStamp) {
+  MoreVideosAdapter(@NonNull FbVideo baseItem, long initTimeStamp) {
     super();
     setHasStableIds(true);
     this.initTimeStamp = initTimeStamp;
@@ -69,11 +69,16 @@ import java.util.List;
     return items.get(posInList);
   }
 
-  @Override public MoreVideoItemViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+  @NonNull @Override
+  public MoreVideoItemViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
     View view = LayoutInflater.from(parent.getContext())
         .inflate(MoreVideoItemViewHolder.LAYOUT_RES, parent, false);
     MoreVideoItemViewHolder viewHolder = new MoreVideoItemViewHolder(view);
     viewHolder.setEventListener(new ToroPlayer.EventListener() {
+      @Override public void onFirstFrameRendered() {
+
+      }
+
       @Override public void onBuffering() {
 
       }
@@ -94,7 +99,7 @@ import java.util.List;
     return viewHolder;
   }
 
-  @Override public void onBindViewHolder(MoreVideoItemViewHolder holder, int position) {
+  @Override public void onBindViewHolder(@NonNull MoreVideoItemViewHolder holder, int position) {
     holder.bind(this, getItem(position), null);
   }
 

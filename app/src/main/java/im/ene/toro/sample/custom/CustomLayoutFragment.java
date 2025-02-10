@@ -23,20 +23,19 @@ import android.graphics.Point;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.ActivityOptionsCompat;
-import android.support.v4.view.PagerAdapter;
-import android.support.v4.view.ViewCompat;
-import android.support.v4.view.ViewPager;
-import android.support.v7.widget.PagerSnapHelper;
-import android.support.v7.widget.RecyclerView;
 import android.text.Html;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.ActivityOptionsCompat;
+import androidx.core.view.ViewCompat;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager.widget.PagerAdapter;
+import androidx.viewpager.widget.ViewPager;
 import butterknife.BindView;
 import com.google.android.exoplayer2.Format;
 import com.google.android.exoplayer2.Player;
@@ -50,6 +49,7 @@ import im.ene.toro.sample.R;
 import im.ene.toro.sample.SinglePlayerActivity;
 import im.ene.toro.sample.common.BaseFragment;
 import im.ene.toro.widget.Container;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * @author eneim (7/1/17).
@@ -117,7 +117,7 @@ public class CustomLayoutFragment extends BaseFragment {
     snapHelper.attachToRecyclerView(container);
 
     onScrollListener = new RecyclerView.OnScrollListener() {
-      @Override public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+      @Override public void onScrollStateChanged(@NotNull RecyclerView recyclerView, int newState) {
         if (newState == RecyclerView.SCROLL_STATE_IDLE) {
           int pos = layoutManager.getActiveCardPosition();
           handler.obtainMessage(MSG_CONTAINER_SCROLL_IDLE, pos, -1).sendToTarget();
